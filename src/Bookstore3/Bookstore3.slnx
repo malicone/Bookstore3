@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="Bookstore3.Model/Bookstore3.Model.csproj" Id="4e299a21-a893-4664-9c3a-358f7c2e1821" />
+  <Project Path="Bookstore3.Repository/Bookstore3.Repository.csproj" Id="f94e0b4d-1dec-4e28-ba6f-3ed45e77adb8" />
   <Project Path="Bookstore3.WPF/Bookstore3.WPF.csproj" />
 </Solution>
