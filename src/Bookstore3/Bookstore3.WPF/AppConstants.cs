@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+﻿using System.Windows.Media;
 
 namespace Bookstore3.WPF;
 
@@ -6,10 +6,14 @@ public static class AppConstants
 {
     public const string AppSettingsFileName = "appsettings.json";
     public const string DefaultDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+    public const string GridCellBorderColor = "#E0E0E0";
 
-    public static string FormatDateTime(DateTime dateTime) =>
-        dateTime.ToString(DefaultDateTimeFormat, CultureInfo.InvariantCulture);
+    public static SolidColorBrush GridCellBorderBrush { get; } = CreateFrozenBrush(GridCellBorderColor);
 
-    public static string FormatDateTime(DateTime? dateTime) =>
-        dateTime.HasValue ? FormatDateTime(dateTime.Value) : string.Empty;
+    private static SolidColorBrush CreateFrozenBrush(string color)
+    {
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)!);
+        brush.Freeze();
+        return brush;
+    }
 }

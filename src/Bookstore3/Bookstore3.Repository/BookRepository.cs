@@ -16,7 +16,8 @@ public class BookRepository : KpzRepository<long, book>, IBookRepository
     {
         if(OpenConnection())
         {
-            return Connection!.Query<book_ex>(BuiltSelectAllBooksLightweightQuery());
+            string sql = BuiltSelectAllBooksLightweightQuery();
+            return Connection!.Query<book_ex>(sql);
         }
         return Enumerable.Empty<book_ex>();
     }
@@ -25,7 +26,8 @@ public class BookRepository : KpzRepository<long, book>, IBookRepository
     {
         if (OpenConnection())
         {
-            return await Connection!.QueryAsync<book_ex>(BuiltSelectAllBooksLightweightQuery());
+            string sql = BuiltSelectAllBooksLightweightQuery();
+            return await Connection!.QueryAsync<book_ex>(sql);
         }
         return await Task.FromResult(Enumerable.Empty<book_ex>());
     }

@@ -14,6 +14,7 @@
         MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Loaded="MainWindow_LoadedHandler">
+    
     <Window.Resources>
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="36" />
@@ -46,10 +47,7 @@
         </Style>
 
         <Style TargetType="syncfusion:GridCell">
-            <Setter Property="BorderBrush" Value="#E0E0E0" />
-        </Style>
-        <Style TargetType="syncfusion:GridHeaderCellControl">
-            <Setter Property="BorderBrush" Value="#E0E0E0" />
+            <Setter Property="BorderBrush" Value="{x:Static local:AppConstants.GridCellBorderBrush}" />
         </Style>
     </Window.Resources>
 
@@ -92,6 +90,15 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="ColumnChooserButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="ColumnChooserButton_ClickHandler">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="ViewColumn" Style="{StaticResource ToolbarIconStyle}" />
+                            <TextBlock Text="Columns" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
                     <Separator />
 
                     <Menu VerticalAlignment="Center" Background="Transparent">
@@ -108,11 +115,11 @@
                                                                 VerticalAlignment="Center" />
                                 </StackPanel>
                             </MenuItem.Header>
-                            <MenuItem Header="Groups" />
-                            <MenuItem Header="Publishers" />
-                            <MenuItem Header="Shops" />
-                            <MenuItem Header="Languages" />
-                            <MenuItem Header="Cities" />
+                            <MenuItem x:Name="GroupsMenuItem" Header="Groups" Click="GroupsMenuItem_ClickHandler" />
+                            <MenuItem x:Name="PublishersMenuItem" Header="Publishers" Click="PublishersMenuItem_ClickHandler" />
+                            <MenuItem x:Name="ShopsMenuItem" Header="Shops" Click="ShopsMenuItem_ClickHandler" />
+                            <MenuItem x:Name="LanguagesMenuItem" Header="Languages" Click="LanguagesMenuItem_ClickHandler" />
+                            <MenuItem x:Name="CitiesMenuItem" Header="Cities" Click="CitiesMenuItem_ClickHandler" />
                         </MenuItem>
                     </Menu>
                 </ToolBar>
@@ -149,6 +156,13 @@
                                            AutoGenerateColumns="False"
                                            AllowSorting="True"
                                            AllowTriStateSorting="True"
+                                           ShowSortNumbers="True"
+                                           AllowGrouping="True"
+                                           ShowGroupDropArea="True"
+                                           IsGroupDropAreaExpanded="True"
+                                           GroupDropAreaText="Drag a column header here to group by that column."
+                                           AllowFiltering="True"
+                                           LiveDataUpdateMode="AllowDataShaping"
                                            AllowDraggingColumns="True"
                                            AllowResizingColumns="True"
                                            AllowResizingHiddenColumns="True"
@@ -176,7 +190,7 @@
                                                        HeaderText="Title"
                                                        Width="220" />
                             <syncfusion:GridTextColumn MappingName="group_name"
-                                                       HeaderText="Group Name"
+                                                       HeaderText="Group"
                                                        Width="160" />
                             <syncfusion:GridTextColumn MappingName="publisher_name"
                                                        HeaderText="Publisher"
@@ -362,45 +376,45 @@
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Group" Style="{StaticResource DetailLabelStyle}" />
                             <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" x:Name="DetailGroupText" Width="700" Style="{StaticResource DetailValueStyle}" />
 
-                            <!-- Row 4: small | small -->
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Edition" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="DetailEditionText" Width="250" Style="{StaticResource DetailValueStyle}" />
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="Page Count" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
-                            <TextBox Grid.Row="4" Grid.Column="3" x:Name="DetailPageCountText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <!-- Row 4: long -->
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="ISBN" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" x:Name="DetailIsbnText" Width="700" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 5: small | small -->
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Publisher" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="5" Grid.Column="1" x:Name="DetailPublisherText" Width="250" Style="{StaticResource DetailValueStyle}" />
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="Shop" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
-                            <TextBox Grid.Row="5" Grid.Column="3" x:Name="DetailShopText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Edition" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="5" Grid.Column="1" x:Name="DetailEditionText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="5" Grid.Column="2" Text="Page Count" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
+                            <TextBox Grid.Row="5" Grid.Column="3" x:Name="DetailPageCountText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 6: small | small -->
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Format" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="6" Grid.Column="1" x:Name="DetailFormatText" Width="250" Style="{StaticResource DetailValueStyle}" />
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="ISBN" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
-                            <TextBox Grid.Row="6" Grid.Column="3" x:Name="DetailIsbnText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Publisher" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="6" Grid.Column="1" x:Name="DetailPublisherText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="6" Grid.Column="2" Text="Shop" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
+                            <TextBox Grid.Row="6" Grid.Column="3" x:Name="DetailShopText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 7: small | small -->
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Price" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="7" Grid.Column="1" x:Name="DetailPriceText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Format" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="7" Grid.Column="1" x:Name="DetailFormatText" Width="250" Style="{StaticResource DetailValueStyle}" />
                             <TextBlock Grid.Row="7" Grid.Column="2" Text="Publish Year" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
                             <TextBox Grid.Row="7" Grid.Column="3" x:Name="DetailPublishYearText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 8: small | small -->
-                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Got At" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="8" Grid.Column="1" x:Name="DetailGotAtText" Width="250" Style="{StaticResource DetailValueStyle}" />
-                            <TextBlock Grid.Row="8" Grid.Column="2" Text="Hardcover" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
-                            <TextBox Grid.Row="8" Grid.Column="3" x:Name="DetailHardcoverText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Price" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="8" Grid.Column="1" x:Name="DetailPriceText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="8" Grid.Column="2" Text="Got At" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
+                            <TextBox Grid.Row="8" Grid.Column="3" x:Name="DetailGotAtText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 9: small | small -->
-                            <TextBlock Grid.Row="9" Grid.Column="0" Text="Language" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="9" Grid.Column="1" x:Name="DetailLanguageText" Width="250" Style="{StaticResource DetailValueStyle}" />
-                            <TextBlock Grid.Row="9" Grid.Column="2" Text="Digit Copy" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
-                            <TextBox Grid.Row="9" Grid.Column="3" x:Name="DetailDigitCopyText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="9" Grid.Column="0" Text="Hardcover" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="9" Grid.Column="1" x:Name="DetailHardcoverText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="9" Grid.Column="2" Text="Language" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
+                            <TextBox Grid.Row="9" Grid.Column="3" x:Name="DetailLanguageText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
-                            <!-- Row 10: small (left pair only) -->
-                            <TextBlock Grid.Row="10" Grid.Column="0" Text="City" Style="{StaticResource DetailLabelStyle}" />
-                            <TextBox Grid.Row="10" Grid.Column="1" x:Name="DetailCityText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <!-- Row 10: small | small -->
+                            <TextBlock Grid.Row="10" Grid.Column="0" Text="Digit Copy" Style="{StaticResource DetailLabelStyle}" />
+                            <TextBox Grid.Row="10" Grid.Column="1" x:Name="DetailDigitCopyText" Width="250" Style="{StaticResource DetailValueStyle}" />
+                            <TextBlock Grid.Row="10" Grid.Column="2" Text="City" Style="{StaticResource DetailLabelStyle}" Margin="16,0,8,0" />
+                            <TextBox Grid.Row="10" Grid.Column="3" x:Name="DetailCityText" Width="250" Style="{StaticResource DetailValueStyle}" />
 
                             <!-- Row 11: long -->
                             <TextBlock Grid.Row="11" Grid.Column="0" Text="Book File" Style="{StaticResource DetailLabelStyle}" />

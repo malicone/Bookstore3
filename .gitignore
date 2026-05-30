@@ -427,9 +427,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+/database/backups
 /database/tools
 /database/BOOKSTORE.FDB
 /database/Bookstore3SqliteDb.db
 /database/scripts/Bookstore2_2026-05-27_Firebird_entire_db_data_script.sql
 /database/scripts/Bookstore2_2026-05-27_Firebird_entire_db_metadata_script.sql
 /database/scripts/Bookstore3_2026-05-27_SQLite_entire_db_data_insert.sql
+/docs/todo.txt

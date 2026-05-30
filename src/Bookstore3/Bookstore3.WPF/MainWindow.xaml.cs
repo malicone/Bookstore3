@@ -1,13 +1,17 @@
 ﻿using Bookstore3.Model;
+using Bookstore3.Model.Abstract;
 using Bookstore3.Repository;
 using Config.Net;
 using KpzRepository.Repository;
 using Syncfusion.UI.Xaml.Grid;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace Bookstore3.WPF;
 
@@ -17,6 +21,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         BooksDataGrid.SelectionChanged += BooksDataGrid_SelectionChanged;
+        BooksDataGrid.SortColumnsChanging += BooksDataGrid_SortColumnsChanging;
+        LocationChanged += (_, _) => PositionColumnChooserIfVisible();
+        SizeChanged += (_, _) => PositionColumnChooserIfVisible();
     }
 
     private void MainWindow_LoadedHandler(object sender, RoutedEventArgs e)
@@ -30,14 +37,18 @@ public partial class MainWindow : Window
             _repositoryFactory = new BookstoreRepositoryFactory(_appSettings.DefaultConnectionString);
             _bookRepository = _repositoryFactory.GetBookRepository();
             _groupRepository = _repositoryFactory.GetBaseRepository<long, group>();
+            _publisherRepository = _repositoryFactory.GetBaseRepository<long, publisher>();
             _shopRepository = _repositoryFactory.GetBaseRepository<long, shop>();
+            _languageRepository = _repositoryFactory.GetBaseRepository<long, language>();
+            _cityRepository = _repositoryFactory.GetBaseRepository<long, city>();
 
             LoadBooks();
             UpdateStatusBar();
+            InitializeColumnChooser();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppUtils.ShowErrorMessage($"An error occurred: {ex.Message}");
         }
     }
 
@@ -47,16 +58,95 @@ public partial class MainWindow : Window
         UpdateStatusBar();
     }
 
+    private void GroupsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        ShowLookupWindow(_groupRepository, "Groups");
+
+    private void PublishersMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        ShowLookupWindow(_publisherRepository, "Publishers");
+
+    private void ShopsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        ShowLookupWindow(_shopRepository, "Shops");
+
+    private void LanguagesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        ShowLookupWindow(_languageRepository, "Languages");
+
+    private void CitiesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        ShowLookupWindow(_cityRepository, "Cities");
+
+    private void ShowLookupWindow<TEntity>(IKpzRepository<long, TEntity>? repository, string title)
+        where TEntity : lookup_entity, new()
+    {
+        if (repository is null)
+            return;
+
+        var lookupWindow = new BaseLookupWindow<TEntity>(repository, title)
+        {
+            Owner = this
+        };
+        lookupWindow.ShowDialog();
+        LoadBooks();
+        UpdateStatusBar();
+    }
+
+    private void ColumnChooserButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (_columnChooserWindow is null)
+            InitializeColumnChooser();
+
+        PositionColumnChooser();
+        _columnChooserWindow!.Show();
+        _columnChooserWindow.Activate();
+    }
+
+    private void InitializeColumnChooser()
+    {
+        if (_columnChooserWindow is not null)
+            return;
+
+        _columnChooserWindow = new ColumnChooser(BooksDataGrid)
+        {
+            Title = "Columns",
+            WaterMarkText = "Drag columns here to hide them",
+            Owner = this,
+            Width = 280,
+            Height = 400,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            ShowInTaskbar = false
+        };
+
+        BooksDataGrid.GridColumnDragDropController =
+            new GridColumnChooserController(BooksDataGrid, _columnChooserWindow);
+
+        PositionColumnChooser();
+    }
+
+    private void PositionColumnChooserIfVisible()
+    {
+        if (_columnChooserWindow?.IsVisible == true)
+            PositionColumnChooser();
+    }
+
+    private void PositionColumnChooser()
+    {
+        if (_columnChooserWindow is null)
+            return;
+
+        const double margin = 8;
+        _columnChooserWindow.Left = Left + ActualWidth - _columnChooserWindow.Width - margin;
+        _columnChooserWindow.Top = Top + ActualHeight - _columnChooserWindow.Height - margin;
+    }
+
     private void LoadBooks()
     {
         if (_bookRepository is null)
             return;
 
         var books = _bookRepository.GetAllBooksLightweight().ToList();
-        _books = new ObservableCollection<book_ex>(books);
-        BooksDataGrid.ItemsSource = _books;
+        _allBooksCollection = new ObservableCollection<book_ex>(books);
+        BooksDataGrid.ItemsSource = _allBooksCollection;
+        ApplyDefaultGridSort();
 
-        if (_books.Count > 0)
+        if (_allBooksCollection.Count > 0)
         {
             _currentBookIndex = 0;
             DisplayCurrentBook();
@@ -70,9 +160,60 @@ public partial class MainWindow : Window
         UpdateDetailNavigationButtons();
     }
 
+    private void ApplyDefaultGridSort()
+    {
+        BooksDataGrid.SortColumnDescriptions.Clear();
+        BooksDataGrid.SortColumnDescriptions.Add(new SortColumnDescription
+        {
+            ColumnName = nameof(book_ex.id),
+            SortDirection = ListSortDirection.Ascending
+        });
+    }
+
+    private void BooksDataGrid_SortColumnsChanging(object? sender, GridSortColumnsChangingEventArgs e)
+    {
+        // Accumulate sort columns without Ctrl so ShowSortNumbers can display 1, 2, 3…
+        e.Cancel = true;
+
+        BooksDataGrid.Dispatcher.BeginInvoke(() =>
+        {
+            switch (e.Action)
+            {
+                case NotifyCollectionChangedAction.Add when e.AddedItems.Count > 0:
+                    BooksDataGrid.SortColumnDescriptions.Add(e.AddedItems[0]);
+                    break;
+
+                case NotifyCollectionChangedAction.Replace when e.AddedItems.Count > 0:
+                {
+                    var columnName = e.AddedItems[0].ColumnName;
+                    var existing = BooksDataGrid.SortColumnDescriptions
+                        .FirstOrDefault(sd => sd.ColumnName == columnName);
+                    if (existing is not null)
+                        BooksDataGrid.SortColumnDescriptions.Remove(existing);
+                    BooksDataGrid.SortColumnDescriptions.Add(e.AddedItems[0]);
+                    break;
+                }
+
+                case NotifyCollectionChangedAction.Remove:
+                    foreach (SortColumnDescription removed in e.RemovedItems)
+                    {
+                        var existing = BooksDataGrid.SortColumnDescriptions
+                            .FirstOrDefault(sd => sd.ColumnName == removed.ColumnName);
+                        if (existing is not null)
+                            BooksDataGrid.SortColumnDescriptions.Remove(existing);
+                    }
+                    break;
+
+                case NotifyCollectionChangedAction.Reset:
+                    BooksDataGrid.SortColumnDescriptions.Clear();
+                    break;
+            }
+        }, DispatcherPriority.ApplicationIdle);
+    }
+
     private void BooksDataGrid_SelectionChanged(object? sender, GridSelectionChangedEventArgs e)
     {
-        if (_books is null || BooksDataGrid.SelectedItem is not book_ex selected)
+        if (_allBooksCollection is null || BooksDataGrid.SelectedItem is not book_ex selected)
             return;
 
         var index = FindBookIndexById(selected.id);
@@ -91,7 +232,7 @@ public partial class MainWindow : Window
 
     private void DetailPreviousButton_ClickHandler(object sender, RoutedEventArgs e)
     {
-        if (_books is null || _currentBookIndex <= 0)
+        if (_allBooksCollection is null || _currentBookIndex <= 0)
             return;
 
         _currentBookIndex--;
@@ -102,7 +243,7 @@ public partial class MainWindow : Window
 
     private void DetailNextButton_ClickHandler(object sender, RoutedEventArgs e)
     {
-        if (_books is null || _currentBookIndex < 0 || _currentBookIndex >= _books.Count - 1)
+        if (_allBooksCollection is null || _currentBookIndex < 0 || _currentBookIndex >= _allBooksCollection.Count - 1)
             return;
 
         _currentBookIndex++;
@@ -118,7 +259,7 @@ public partial class MainWindow : Window
 
     private void NavigateToBookId(long? bookId)
     {
-        if (_books is null || _books.Count == 0 || bookId is null)
+        if (_allBooksCollection is null || _allBooksCollection.Count == 0 || bookId is null)
             return;
 
         var index = FindBookIndexById(bookId.Value);
@@ -133,17 +274,17 @@ public partial class MainWindow : Window
 
     private void DisplayCurrentBook()
     {
-        if (_books is null || _currentBookIndex < 0 || _currentBookIndex >= _books.Count)
+        if (_allBooksCollection is null || _currentBookIndex < 0 || _currentBookIndex >= _allBooksCollection.Count)
         {
             ClearDetails();
             return;
         }
 
-        var summary = _books[_currentBookIndex];
+        var summary = _allBooksCollection[_currentBookIndex];
         book? full = _bookRepository?.Get(summary.id);
 
         DetailIdText.Text = summary.id.ToString(CultureInfo.InvariantCulture);
-        DetailCreatedAtText.Text = AppConstants.FormatDateTime(summary.crt_date_time);
+        DetailCreatedAtText.Text = AppUtils.FormatDateTime(summary.crt_date_time);
         DetailAuthorText.Text = summary.author ?? string.Empty;
         DetailTitleText.Text = summary.title;
         DetailGroupText.Text = summary.group_name ?? string.Empty;
@@ -154,7 +295,7 @@ public partial class MainWindow : Window
         DetailPageCountText.Text = summary.page_count?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
         DetailPriceText.Text = summary.price?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
         DetailPublishYearText.Text = summary.publish_year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-        DetailGotAtText.Text = AppConstants.FormatDateTime(summary.date_when_get);
+        DetailGotAtText.Text = AppUtils.FormatDateTime(summary.date_when_get);
         DetailHardcoverText.Text = summary.wrapper ? "Yes" : "No";
         DetailLanguageText.Text = summary.language_name ?? string.Empty;
         DetailDigitCopyText.Text = summary.has_digit_copy ? "Yes" : "No";
@@ -219,7 +360,7 @@ public partial class MainWindow : Window
 
     private void UpdateDetailNavigationButtons()
     {
-        var hasBooks = _books is { Count: > 0 } && _currentBookIndex >= 0;
+        var hasBooks = _allBooksCollection is { Count: > 0 } && _currentBookIndex >= 0;
 
         if (!hasBooks || _bookRepository is null)
         {
@@ -230,32 +371,32 @@ public partial class MainWindow : Window
             return;
         }
 
-        var currentId = _books![_currentBookIndex].id;
+        var currentId = _allBooksCollection![_currentBookIndex].id;
         var minId = _bookRepository.GetMinId();
         var maxId = _bookRepository.GetMaxId();
 
         DetailFirstButton.IsEnabled = currentId != minId;
         DetailPreviousButton.IsEnabled = _currentBookIndex > 0;
-        DetailNextButton.IsEnabled = _currentBookIndex < _books.Count - 1;
+        DetailNextButton.IsEnabled = _currentBookIndex < _allBooksCollection.Count - 1;
         DetailLastButton.IsEnabled = currentId != maxId;
     }
 
     private void SyncGridSelectionToCurrentBook()
     {
-        if (_books is null || _currentBookIndex < 0 || _currentBookIndex >= _books.Count)
+        if (_allBooksCollection is null || _currentBookIndex < 0 || _currentBookIndex >= _allBooksCollection.Count)
             return;
 
-        BooksDataGrid.SelectedItem = _books[_currentBookIndex];
+        BooksDataGrid.SelectedItem = _allBooksCollection[_currentBookIndex];
     }
 
     private int FindBookIndexById(long bookId)
     {
-        if (_books is null)
+        if (_allBooksCollection is null)
             return -1;
 
-        for (var i = 0; i < _books.Count; i++)
+        for (var i = 0; i < _allBooksCollection.Count; i++)
         {
-            if (_books[i].id == bookId)
+            if (_allBooksCollection[i].id == bookId)
                 return i;
         }
 
@@ -278,7 +419,11 @@ public partial class MainWindow : Window
     private IBookstoreRepositoryFactory? _repositoryFactory;
     private IBookRepository? _bookRepository;
     private IKpzRepository<long, group>? _groupRepository;
+    private IKpzRepository<long, publisher>? _publisherRepository;
     private IKpzRepository<long, shop>? _shopRepository;
-    private ObservableCollection<book_ex>? _books;
+    private IKpzRepository<long, language>? _languageRepository;
+    private IKpzRepository<long, city>? _cityRepository;
+    private ObservableCollection<book_ex>? _allBooksCollection;
     private int _currentBookIndex = -1;
+    private ColumnChooser? _columnChooserWindow;
 }
