@@ -1,0 +1,325 @@
+<Window x:Class="Bookstore3.WPF.BookWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        xmlns:local="clr-namespace:Bookstore3.WPF"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        mc:Ignorable="d"
+        Title="Book"
+        Width="700"
+        Height="500"
+        WindowStyle="ToolWindow"
+        ShowInTaskbar="False"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        Loaded="BookWindow_LoadedHandler">
+    <Window.Resources>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ToolbarIconStyle" TargetType="iconPacks:PackIconMaterial">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+        <Style x:Key="MainDataLabelStyle" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="MainDataTextBoxStyle" TargetType="TextBox">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataComboBoxStyle" TargetType="syncfusion:ComboBoxAdv">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataIntegerTextBoxStyle" TargetType="syncfusion:IntegerTextBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataDoubleTextBoxStyle" TargetType="syncfusion:DoubleTextBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataDatePickerStyle" TargetType="syncfusion:SfDatePicker">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataDateTimeEditStyle" TargetType="syncfusion:DateTimeEdit">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="MainDataCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+        </Style>
+        <Style x:Key="BookFileButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="4,2,0,2" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="MultilineTextBoxStyle" TargetType="TextBox">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+    </Window.Resources>
+
+    <TabControl Margin="8">
+        <TabItem Header="Cover Image">
+            <DockPanel LastChildFill="True">
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                        BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                        BorderThickness="0,0,0,1"
+                        Padding="4,6"
+                        Margin="0,0,0,8">
+                    <ToolBar Background="Transparent">
+                        <Button x:Name="AddCoverImageButton"
+                                Style="{StaticResource ToolbarButtonStyle}"
+                                Click="AddCoverImageButton_ClickHandler">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="ImagePlus" Style="{StaticResource ToolbarIconStyle}" />
+                                <TextBlock Text="Add" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ClearCoverImageButton"
+                                Style="{StaticResource ToolbarButtonStyle}"
+                                Click="ClearCoverImageButton_ClickHandler">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="ImageRemove" Style="{StaticResource ToolbarIconStyle}" />
+                                <TextBlock Text="Clear" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Separator />
+                        <Button x:Name="RotateCoverLeftButton"
+                                Style="{StaticResource ToolbarButtonStyle}"
+                                Click="RotateCoverLeftButton_ClickHandler">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="RotateLeft" Style="{StaticResource ToolbarIconStyle}" />
+                                <TextBlock Text="Rotate Left" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RotateCoverRightButton"
+                                Style="{StaticResource ToolbarButtonStyle}"
+                                Click="RotateCoverRightButton_ClickHandler">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="RotateRight" Style="{StaticResource ToolbarIconStyle}" />
+                                <TextBlock Text="Rotate Right" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </ToolBar>
+                </Border>
+
+                <Grid x:Name="CoverImageArea"
+                      SizeChanged="CoverImageArea_SizeChanged">
+                    <Border x:Name="CoverImageBorder"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Stretch"
+                            Background="#F0F0F0"
+                            BorderBrush="#D0D0D0"
+                            BorderThickness="1">
+                        <Grid>
+                            <Image x:Name="CoverImage"
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="Collapsed" />
+                            <StackPanel x:Name="NoImagePanel"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <iconPacks:PackIconMaterial Kind="ImageOff"
+                                                            Width="48"
+                                                            Height="48"
+                                                            Foreground="#9E9E9E"
+                                                            HorizontalAlignment="Center" />
+                                <TextBlock Text="No image"
+                                           Margin="0,8,0,0"
+                                           Foreground="#757575"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Main Data">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="0,0,8,0"
+                      VerticalAlignment="Top">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Author" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3"
+                             x:Name="AuthorTextBox"
+                             Style="{StaticResource MainDataTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Title" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
+                             x:Name="TitleTextBox"
+                             Style="{StaticResource MainDataTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Group" Style="{StaticResource MainDataLabelStyle}" />
+                    <syncfusion:ComboBoxAdv Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
+                                            x:Name="GroupComboBox"
+                                            DisplayMemberPath="name"
+                                            SelectedValuePath="id"
+                                            IsEditable="False"
+                                            Style="{StaticResource MainDataComboBoxStyle}" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="ISBN" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                             x:Name="IsbnTextBox"
+                             Style="{StaticResource MainDataTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Edition" Style="{StaticResource MainDataLabelStyle}" />
+                    <syncfusion:IntegerTextBox Grid.Row="4" Grid.Column="1"
+                                               x:Name="EditionIntegerTextBox"
+                                               Style="{StaticResource MainDataIntegerTextBoxStyle}" />
+                    <TextBlock Grid.Row="4" Grid.Column="2" Text="Page Count" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:IntegerTextBox Grid.Row="4" Grid.Column="3"
+                                               x:Name="PageCountIntegerTextBox"
+                                               Style="{StaticResource MainDataIntegerTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Publisher" Style="{StaticResource MainDataLabelStyle}" />
+                    <syncfusion:ComboBoxAdv Grid.Row="5" Grid.Column="1"
+                                            x:Name="PublisherComboBox"
+                                            DisplayMemberPath="name"
+                                            SelectedValuePath="id"
+                                            IsEditable="False"
+                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <TextBlock Grid.Row="5" Grid.Column="2" Text="Shop" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:ComboBoxAdv Grid.Row="5" Grid.Column="3"
+                                            x:Name="ShopComboBox"
+                                            DisplayMemberPath="name"
+                                            SelectedValuePath="id"
+                                            IsEditable="False"
+                                            Style="{StaticResource MainDataComboBoxStyle}" />
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Format" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBox Grid.Row="6" Grid.Column="1"
+                             x:Name="FormatTextBox"
+                             Style="{StaticResource MainDataTextBoxStyle}" />
+                    <TextBlock Grid.Row="6" Grid.Column="2" Text="Publish Year" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:SfDatePicker Grid.Row="6" Grid.Column="3"
+                                             x:Name="PublishYearDatePicker"
+                                             FormatString="yyyy"
+                                             SelectorFormatString="yyyy"
+                                             Style="{StaticResource MainDataDatePickerStyle}" />
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="Price" Style="{StaticResource MainDataLabelStyle}" />
+                    <syncfusion:DoubleTextBox Grid.Row="7" Grid.Column="1"
+                                              x:Name="PriceDoubleTextBox"
+                                              NumberDecimalDigits="2"
+                                              Style="{StaticResource MainDataDoubleTextBoxStyle}" />
+                    <TextBlock Grid.Row="7" Grid.Column="2" Text="Got At" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:DateTimeEdit Grid.Row="7" Grid.Column="3"
+                                             x:Name="GotAtDateTimeEdit"
+                                             Pattern="CustomPattern"
+                                             CustomPattern="{x:Static local:AppConstants.DefaultDateTimeFormat}"
+                                             Style="{StaticResource MainDataDateTimeEditStyle}" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Hardcover" Style="{StaticResource MainDataLabelStyle}" />
+                    <CheckBox Grid.Row="8" Grid.Column="1"
+                              x:Name="HardcoverCheckBox"
+                              Style="{StaticResource MainDataCheckBoxStyle}" />
+                    <TextBlock Grid.Row="8" Grid.Column="2" Text="Language" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:ComboBoxAdv Grid.Row="8" Grid.Column="3"
+                                            x:Name="LanguageComboBox"
+                                            DisplayMemberPath="name"
+                                            SelectedValuePath="id"
+                                            IsEditable="False"
+                                            Style="{StaticResource MainDataComboBoxStyle}" />
+
+                    <TextBlock Grid.Row="9" Grid.Column="0" Text="Digital Copy" Style="{StaticResource MainDataLabelStyle}" />
+                    <CheckBox Grid.Row="9" Grid.Column="1"
+                              x:Name="DigitalCopyCheckBox"
+                              Style="{StaticResource MainDataCheckBoxStyle}" />
+                    <TextBlock Grid.Row="9" Grid.Column="2" Text="City" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <syncfusion:ComboBoxAdv Grid.Row="9" Grid.Column="3"
+                                            x:Name="CityComboBox"
+                                            DisplayMemberPath="name"
+                                            SelectedValuePath="id"
+                                            IsEditable="False"
+                                            Style="{StaticResource MainDataComboBoxStyle}" />
+
+                    <TextBlock Grid.Row="10" Grid.Column="0" Text="Book File" Style="{StaticResource MainDataLabelStyle}" />
+                    <Grid Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 x:Name="BookFileTextBox"
+                                 IsReadOnly="True"
+                                 Style="{StaticResource MainDataTextBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ChooseBookFileButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                Click="ChooseBookFileButton_ClickHandler"
+                                ToolTip="Choose book file">
+                            <iconPacks:PackIconMaterial Kind="FolderOpen" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
+                </Grid>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Annotation">
+            <TextBox x:Name="AnnotationTextBox"
+                     Style="{StaticResource MultilineTextBoxStyle}" />
+        </TabItem>
+
+        <TabItem Header="Details">
+            <TextBox x:Name="DetailsTextBox"
+                     Style="{StaticResource MultilineTextBoxStyle}" />
+        </TabItem>
+    </TabControl>
+</Window>

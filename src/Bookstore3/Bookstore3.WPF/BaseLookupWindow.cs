@@ -18,18 +18,14 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
         Title = title;
         Width = 600;
         Height = 800;
+        WindowStyle = WindowStyle.ToolWindow;
         ResizeMode = ResizeMode.CanResize;
+        ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         BuildUi();
 
         Loaded += BaseLookupWindow_LoadedHandler;
-    }
-
-    protected override void OnSourceInitialized(EventArgs e)
-    {
-        base.OnSourceInitialized(e);
-        NativeWindowStyles.DisableMinimizeAndMaximizeButtons(this);
     }
 
     private static readonly SolidColorBrush GridLineBrush = AppConstants.GridCellBorderBrush;

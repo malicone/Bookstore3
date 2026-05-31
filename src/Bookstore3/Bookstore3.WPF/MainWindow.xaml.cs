@@ -8,9 +8,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Windows;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace Bookstore3.WPF;
@@ -56,6 +54,28 @@ public partial class MainWindow : Window
     {
         LoadBooks();
         UpdateStatusBar();
+    }
+
+    private void NewRecordButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (_repositoryFactory is null)
+            return;
+
+        var bookWindow = new BookWindow(_repositoryFactory, AppConstants.NullRecordId)
+        {
+            Owner = this
+        };
+        bookWindow.ShowDialog();
+        LoadBooks();
+        UpdateStatusBar();
+    }
+
+    private long GetSelectedBookId()
+    {
+        if (BooksDataGrid.SelectedItem is book_ex selected)
+            return selected.id;
+
+        return AppConstants.NullRecordId;
     }
 
     private void GroupsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
@@ -306,7 +326,7 @@ public partial class MainWindow : Window
         DetailAnnotationText.Text = full?.annotation ?? string.Empty;
         DetailDetailsText.Text = full?.details ?? string.Empty;
 
-        LoadCoverImage(full?.cover_image);
+        AppUtils.LoadCoverImage(full?.cover_image, CoverImage, NoImagePanel);
     }
 
     private void ClearDetails()
@@ -332,30 +352,7 @@ public partial class MainWindow : Window
         DetailBookFileText.Text = string.Empty;
         DetailAnnotationText.Text = string.Empty;
         DetailDetailsText.Text = string.Empty;
-        LoadCoverImage(null);
-    }
-
-    private void LoadCoverImage(byte[]? coverImage)
-    {
-        if (coverImage is { Length: > 0 })
-        {
-            using var stream = new MemoryStream(coverImage);
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.StreamSource = stream;
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-
-            CoverImage.Source = image;
-            CoverImage.Visibility = Visibility.Visible;
-            NoImagePanel.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        CoverImage.Source = null;
-        CoverImage.Visibility = Visibility.Collapsed;
-        NoImagePanel.Visibility = Visibility.Visible;
+        AppUtils.LoadCoverImage(null, CoverImage, NoImagePanel);
     }
 
     private void UpdateDetailNavigationButtons()

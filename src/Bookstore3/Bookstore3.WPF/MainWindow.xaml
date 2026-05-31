@@ -49,6 +49,10 @@
         <Style TargetType="syncfusion:GridCell">
             <Setter Property="BorderBrush" Value="{x:Static local:AppConstants.GridCellBorderBrush}" />
         </Style>
+        <Style TargetType="syncfusion:GridTableSummaryCell">
+            <Setter Property="HorizontalContentAlignment" Value="Right" />
+            <Setter Property="BorderBrush" Value="{x:Static local:AppConstants.GridCellBorderBrush}" />
+        </Style>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -61,7 +65,9 @@
             <DockPanel LastChildFill="False">
                 <ToolBar Background="Transparent"
                          DockPanel.Dock="Left">
-                    <Button Style="{StaticResource ToolbarButtonStyle}">
+                    <Button x:Name="NewRecordButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="NewRecordButton_ClickHandler">
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Plus" Style="{StaticResource ToolbarIconStyle}" />
                             <TextBlock Text="New Record" VerticalAlignment="Center" />
@@ -150,7 +156,7 @@
 
         <!-- Tabs -->
         <TabControl Margin="8">
-            <TabItem Header="List">
+            <TabItem Header="List of All Books">
                 <Grid>
                     <syncfusion:SfDataGrid x:Name="BooksDataGrid"
                                            AutoGenerateColumns="False"
@@ -177,7 +183,7 @@
                             <syncfusion:GridTextColumn MappingName="id"
                                                        HeaderText="Id"
                                                        TextAlignment="Right"
-                                                       Width="60" />
+                                                       Width="100" />
                             <syncfusion:GridDateTimeColumn MappingName="crt_date_time"
                                                          HeaderText="Created At"
                                                          Width="160"
@@ -216,7 +222,7 @@
                             <syncfusion:GridNumericColumn MappingName="price"
                                                           HeaderText="Price"
                                                           NumberDecimalDigits="2"
-                                                          Width="80" />
+                                                          Width="120" />
                             <syncfusion:GridDateTimeColumn MappingName="date_when_get"
                                                          HeaderText="Got At"
                                                          Width="160"
@@ -240,11 +246,26 @@
                                                          AllowEditing="False"
                                                          Width="90" />
                         </syncfusion:SfDataGrid.Columns>
+                        <syncfusion:SfDataGrid.TableSummaryRows>
+                            <syncfusion:GridTableSummaryRow ShowSummaryInRow="False"
+                                                            Position="Bottom">
+                                <syncfusion:GridSummaryRow.SummaryColumns>
+                                    <syncfusion:GridSummaryColumn MappingName="id"
+                                                                  Name="IdCount"
+                                                                  SummaryType="CountAggregate"
+                                                                  Format="Count: {Count}" />
+                                    <syncfusion:GridSummaryColumn MappingName="price"
+                                                                  Name="PriceSum"
+                                                                  SummaryType="DoubleAggregate"
+                                                                  Format="Sum: {Sum:0.00}" />
+                                </syncfusion:GridSummaryRow.SummaryColumns>
+                            </syncfusion:GridTableSummaryRow>
+                        </syncfusion:SfDataGrid.TableSummaryRows>
                     </syncfusion:SfDataGrid>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Details">
+            <TabItem Header="Details of Selected Book">
                 <Grid Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -435,6 +456,7 @@
                                        FontWeight="SemiBold"
                                        Margin="0,0,0,4" />
                             <TextBox x:Name="DetailAnnotationText"
+                                     FontSize="14"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
@@ -449,6 +471,7 @@
                                        FontWeight="SemiBold"
                                        Margin="0,0,0,4" />
                             <TextBox x:Name="DetailDetailsText"
+                                     FontSize="14"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
