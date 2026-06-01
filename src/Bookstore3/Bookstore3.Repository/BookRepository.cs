@@ -78,9 +78,7 @@ public class BookRepository : KpzRepository<long, book>, IBookRepository
         BuiltSelectBooksLightweightBaseQuery() +
 @"WHERE (
     b.title LIKE @Pattern OR
-    COALESCE(b.author, '') LIKE @Pattern OR
-    COALESCE(b.details, '') LIKE @Pattern OR
-    COALESCE(b.annotation, '') LIKE @Pattern
+    COALESCE(b.author, '') LIKE @Pattern
 )
 ORDER BY b.id";
 

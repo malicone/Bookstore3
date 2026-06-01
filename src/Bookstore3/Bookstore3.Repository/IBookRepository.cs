@@ -20,7 +20,7 @@ public interface IBookRepository : IKpzRepository<long, book>
     Task<IEnumerable<book_ex>> GetAllBooksLightweightAsync();
 
     /// <summary>
-    /// Searches for books by the title, author, annotation, details fields.
+    /// Searches for books by title or author.
     /// Returns a list of books with only 'small' fields like id, title, price and omits the 'big' fields like description, image, etc.
     /// This is useful for displaying a list of books (no memory overhead).
     /// </summary>
@@ -29,7 +29,7 @@ public interface IBookRepository : IKpzRepository<long, book>
     IEnumerable<book_ex> SearchBooksLightweight(string searchText);
 
     /// <summary>
-    /// Asynchronously searches for books by the title, author, annotation, details fields.
+    /// Asynchronously searches for books by title or author.
     /// Returns a list of books with only 'small' fields like id, title, price and omits the 'big' fields like description, image, etc.
     /// This is useful for displaying a list of books (no memory overhead).
     /// </summary>

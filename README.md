@@ -107,14 +107,14 @@ public class BookRepository : KpzRepository<long, book>, IBookRepository
 
 ### Book search
 
-`SearchBooksLightweight` and `SearchBooksLightweightAsync` search **title**, **author**, **details**, and **annotation** using a parameterized `LIKE` pattern. Results use the same lightweight `book_ex` shape as the main grid:
+`SearchBooksLightweight` and `SearchBooksLightweightAsync` search **title** and **author** using a parameterized `LIKE` pattern. Results use the same lightweight `book_ex` shape as the main grid:
 
 ```csharp
 var results = _bookRepository.SearchBooksLightweight("tolstoy");
 var resultsAsync = await _bookRepository.SearchBooksLightweightAsync("war and peace");
 ```
 
-The SQL applies `%searchText%` matching across the four text fields and returns rows ordered by book id.
+The SQL applies `%searchText%` matching on title and author and returns rows ordered by book id.
 
 ### Lookup table maintenance
 
@@ -182,7 +182,7 @@ After confirmation, a save dialog opens with a default file name such as `Books_
 - **Book catalogue** — browse all books in a sortable, filterable, groupable grid; customize visible columns; view row counts and price totals in the grid footer
 - **Book details** — cover image, metadata, annotation, and notes on a dedicated tab; First / Previous / Next / Last navigation moves through visible grid rows (respecting filters and groups)
 - **Create, edit, delete** — full book editor with cover image, lookup fields, and validation; double-click a grid row to edit
-- **Search** — quick text search across title, author, annotation, and details (see [Search](#search) above)
+- **Search** — quick text search by title or author (see [Search](#search) above)
 - **Export** — selected grid rows to Excel, CSV, or PDF via Syncfusion grid export (see [Export](#export) above)
 - **Lookup tables** — maintain groups, publishers, shops, languages, and cities from the Groups menu
 - **Status bar** — live totals for books and all lookup tables

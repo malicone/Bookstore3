@@ -1,31 +1,73 @@
 ﻿using Bookstore3.Model.Abstract;
+using Bookstore3.Repository;
 using KpzRepository.Repository;
 using MahApps.Metro.IconPacks;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Bookstore3.WPF;
 
-public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : lookup_entity, new()
+public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLookupEntity : lookup_entity, new()
 {
-    public BaseLookupWindow(IKpzRepository<long, TLookupEntity>? repository, string title = "List of Records")
+    public BaseLookupWindow(
+        IKpzRepository<long, TLookupEntity>? repository,
+        IAppOptionRepository? appOptionRepository,
+        string title = "List of Records")
     {
         Repository = repository;
+        _appOptionRepository = appOptionRepository;
         Title = title;
         Width = 600;
         Height = 800;
+        MinWidth = 400;
+        MinHeight = 300;
         WindowStyle = WindowStyle.ToolWindow;
         ResizeMode = ResizeMode.CanResize;
         ShowInTaskbar = false;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
         BuildUi();
+        RegisterToolbarShortcuts();
+
+        try
+        {
+            ApplyWindowOptionsFromDatabase();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"An error occurred while loading window options: {ex.Message}");
+        }
 
         Loaded += BaseLookupWindow_LoadedHandler;
+        Closing += BaseLookupWindow_ClosingHandler;
+    }
+
+    public bool SaveOptions()
+    {
+        if (_appOptionRepository is null || _dataGrid is null)
+            return false;
+
+        var result = WindowOptionsPersistence.Save(_appOptionRepository, this, GetFullOptionName);
+        if (SfDataGridOptionsPersistence.Save(
+                _appOptionRepository,
+                GetFullOptionName(_DataGridOptionName),
+                _dataGrid) == false)
+            result = false;
+
+        return result;
+    }
+
+    public bool LoadOptions()
+    {
+        var windowLoaded = ApplyWindowOptionsFromDatabase();
+        var gridLoaded = ApplyDataGridOptionsFromDatabase();
+        return windowLoaded || gridLoaded;
     }
 
     private static readonly SolidColorBrush GridLineBrush = AppConstants.GridCellBorderBrush;
@@ -48,11 +90,11 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
         DockPanel.SetDock(toolbarBorder, Dock.Top);
 
         var toolbar = new ToolBar { Background = Brushes.Transparent };
-        toolbar.Items.Add(CreateToolbarButton("New Record", PackIconMaterialKind.Plus, NewRecordButton_ClickHandler));
-        toolbar.Items.Add(CreateToolbarButton("Edit Record", PackIconMaterialKind.Pencil, EditRecordButton_ClickHandler));
-        toolbar.Items.Add(CreateToolbarButton("Delete Record", PackIconMaterialKind.Delete, DeleteRecordButton_ClickHandler));
+        toolbar.Items.Add(CreateToolbarButton("New Record", PackIconMaterialKind.Plus, Key.N, NewRecordButton_ClickHandler));
+        toolbar.Items.Add(CreateToolbarButton("Edit Record", PackIconMaterialKind.Pencil, Key.E, EditRecordButton_ClickHandler));
+        toolbar.Items.Add(CreateToolbarButton("Delete Record", PackIconMaterialKind.Delete, Key.D, DeleteRecordButton_ClickHandler));
         toolbar.Items.Add(new Separator());
-        toolbar.Items.Add(CreateToolbarButton("Refresh Data", PackIconMaterialKind.Refresh, RefreshDataButton_ClickHandler));
+        toolbar.Items.Add(CreateToolbarButton("Refresh Data", PackIconMaterialKind.Refresh, Key.R, RefreshDataButton_ClickHandler));
         toolbarBorder.Child = toolbar;
 
         var statusBar = new Border
@@ -111,7 +153,19 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
         Content = root;
     }
 
-    private static Button CreateToolbarButton(string text, PackIconMaterialKind iconKind, RoutedEventHandler? clickHandler = null)
+    private void RegisterToolbarShortcuts()
+    {
+        ToolbarShortcutHelper.Register(this, Key.N, NewRecordButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.E, EditRecordButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.D, DeleteRecordButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.R, RefreshDataButton_ClickHandler);
+    }
+
+    private static Button CreateToolbarButton(
+        string text,
+        PackIconMaterialKind iconKind,
+        Key shortcutKey,
+        RoutedEventHandler? clickHandler = null)
     {
         var button = new Button
         {
@@ -120,7 +174,8 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
             Margin = new Thickness(2, 0, 2, 0),
             Padding = new Thickness(12, 6, 12, 6),
             VerticalContentAlignment = VerticalAlignment.Center,
-            HorizontalContentAlignment = HorizontalAlignment.Center
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            ToolTip = ToolbarShortcutHelper.FormatToolTip(text, shortcutKey)
         };
 
         var content = new StackPanel { Orientation = Orientation.Horizontal };
@@ -148,7 +203,44 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
     private void BaseLookupWindow_LoadedHandler(object sender, RoutedEventArgs e)
     {
         LoadData();
+        ApplyDataGridOptionsFromDatabase();
         UpdateStatusBar();
+    }
+
+    private void BaseLookupWindow_ClosingHandler(object? sender, CancelEventArgs e)
+    {
+        try
+        {
+            SaveOptions();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to save options: {ex.Message}");
+        }
+    }
+
+    private bool ApplyWindowOptionsFromDatabase()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        return WindowOptionsPersistence.TryApply(
+            _appOptionRepository,
+            this,
+            GetFullOptionName,
+            MinWidth,
+            MinHeight);
+    }
+
+    private bool ApplyDataGridOptionsFromDatabase()
+    {
+        if (_appOptionRepository is null || _dataGrid is null)
+            return false;
+
+        return SfDataGridOptionsPersistence.TryLoad(
+            _appOptionRepository,
+            GetFullOptionName(_DataGridOptionName),
+            _dataGrid);
     }
 
     private void NewRecordButton_ClickHandler(object sender, RoutedEventArgs e)
@@ -245,9 +337,15 @@ public class BaseLookupWindow<TLookupEntity> : Window where TLookupEntity : look
         _countText.Text = string.Format("Count {0}", Repository.Count());
     }
 
+    private string GetFullOptionName(string optionName) => $"{_OptionsPrefix}.{typeof(TLookupEntity).Name}.{optionName}";
+
     protected readonly IKpzRepository<long, TLookupEntity>? Repository;
 
+    private readonly IAppOptionRepository? _appOptionRepository;
     private SfDataGrid? _dataGrid;
     private TextBlock? _countText;
     private ObservableCollection<TLookupEntity>? _items;
+
+    private const string _OptionsPrefix = "LookupWindow";
+    private const string _DataGridOptionName = "DataGrid";
 }

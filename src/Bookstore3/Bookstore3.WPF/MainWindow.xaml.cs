@@ -15,16 +15,19 @@ using Syncfusion.XlsIO;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace Bookstore3.WPF;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, IOptionsSavable
 {
     public MainWindow()
     {
@@ -38,33 +41,91 @@ public partial class MainWindow : Window
         BooksDataGrid.CellDoubleTapped += BooksDataGrid_CellDoubleTappedHandler;
         LocationChanged += (_, _) => PositionColumnChooserIfVisible();
         SizeChanged += (_, _) => PositionColumnChooserIfVisible();
+        RegisterToolbarShortcuts();
+
+        try
+        {
+            InitializeRepositories();
+            ApplyWindowOptionsFromDatabase();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"An error occurred while loading window options: {ex.Message}");
+        }
     }
 
     private void MainWindow_LoadedHandler(object sender, RoutedEventArgs e)
     {
         try
         {
-            _appSettings = new ConfigurationBuilder<IAppSettings>()
-                .UseJsonFile(AppConstants.AppSettingsFileName)
-                .Build();
-
-            _repositoryFactory = new BookstoreRepositoryFactory(_appSettings.DefaultConnectionString);
-            _bookRepository = _repositoryFactory.GetBookRepository();
-            _groupRepository = _repositoryFactory.GetBaseRepository<long, group>();
-            _publisherRepository = _repositoryFactory.GetBaseRepository<long, publisher>();
-            _shopRepository = _repositoryFactory.GetBaseRepository<long, shop>();
-            _languageRepository = _repositoryFactory.GetBaseRepository<long, language>();
-            _cityRepository = _repositoryFactory.GetBaseRepository<long, city>();
+            if (_repositoryFactory is null)
+                InitializeRepositories();
 
             LoadBooks();
+            if (ApplyBooksDataGridOptionsFromDatabase() == false)
+                ApplyDefaultGridSort();
             UpdateStatusBar();
             InitializeColumnChooser();
+            ApplySelectedTabFromDatabase();
             FocusBooksDataGrid();
         }
         catch (Exception ex)
         {
             AppUtils.ShowErrorMessage($"An error occurred: {ex.Message}");
         }
+    }
+
+    private void InitializeRepositories()
+    {
+        if (_repositoryFactory is not null)
+            return;
+
+            _appSettings = new ConfigurationBuilder<IAppSettings>()
+                    .UseJsonFile(AppConstants.AppSettingsFileName)
+                    .Build();
+
+            _repositoryFactory = new BookstoreRepositoryFactory(_appSettings.DefaultConnectionString);
+            _bookRepository = _repositoryFactory.GetBookRepository();
+        _groupRepository = _repositoryFactory.GetBaseRepository<long, group>();
+        _publisherRepository = _repositoryFactory.GetBaseRepository<long, publisher>();
+        _shopRepository = _repositoryFactory.GetBaseRepository<long, shop>();
+        _languageRepository = _repositoryFactory.GetBaseRepository<long, language>();
+        _cityRepository = _repositoryFactory.GetBaseRepository<long, city>();
+        _appOptionRepository = _repositoryFactory.GetAppOptionRepository();
+    }
+
+    private void MainWindow_ClosingHandler(object sender, CancelEventArgs e)
+    {
+        try
+        {
+            SaveOptions();
+        }
+        catch(Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to save options: {ex.Message}");
+        }
+    }
+
+    private void RegisterToolbarShortcuts()
+    {
+        ToolbarShortcutHelper.Register(this, Key.N, NewRecordButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.E, RecordEditButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.D, DeleteRecordButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.R, RefreshDataButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.S, SearchButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.G, GroupsMenuItem_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.M, ColumnChooserButton_ClickHandler);
+        ToolbarShortcutHelper.Register(this, Key.O, ExportButton_ClickHandler);
+
+        RegisterDetailNavigationShortcuts();
+    }
+
+    private void RegisterDetailNavigationShortcuts()
+    {
+        ToolbarShortcutHelper.Register(this, Key.F9, DetailFirstButton_ClickHandler, ModifierKeys.None);
+        ToolbarShortcutHelper.Register(this, Key.F10, DetailPreviousButton_ClickHandler, ModifierKeys.None);
+        ToolbarShortcutHelper.Register(this, Key.F11, DetailNextButton_ClickHandler, ModifierKeys.None);
+        ToolbarShortcutHelper.Register(this, Key.F12, DetailLastButton_ClickHandler, ModifierKeys.None);
     }
 
     private void FocusBooksDataGrid()
@@ -186,6 +247,16 @@ public partial class MainWindow : Window
 
     private void CitiesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
         ShowLookupWindow(_cityRepository, "Cities");
+
+    private void ExportButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (ExportButton.ContextMenu is null)
+            return;
+
+        ExportButton.ContextMenu.PlacementTarget = ExportButton;
+        ExportButton.ContextMenu.Placement = PlacementMode.Bottom;
+        ExportButton.ContextMenu.IsOpen = true;
+    }
 
     private void ExportToExcelMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
         RunGridExport(ExportFormat.Excel);
@@ -314,12 +385,17 @@ public partial class MainWindow : Window
         if (repository is null)
             return;
 
-        var lookupWindow = new BaseLookupWindow<TEntity>(repository, title)
+        var selectedBookId = GetSelectedBookId();
+
+        var lookupWindow = new BaseLookupWindow<TEntity>(repository, _appOptionRepository, title)
         {
             Owner = this
         };
         lookupWindow.ShowDialog();
+
         LoadBooks();
+        if (selectedBookId != AppConstants.NullRecordId)
+            NavigateToBookId(selectedBookId);
         UpdateStatusBar();
     }
 
@@ -352,16 +428,7 @@ public partial class MainWindow : Window
         if (_bookRepository is null || !IsSearchBarVisible)
             return;
 
-        CloseSearchNothingFoundToolTip();
-
         var results = _bookRepository.SearchBooksLightweight(SearchTextBox.Text).ToList();
-        if (results.Count == 0)
-        {
-            ApplySearchResultsToGrid(results, syncGridSelection: MainTabControl.SelectedIndex == 0);
-            ShowSearchNothingFoundToolTip();
-            return;
-        }
-
         ApplySearchResultsToGrid(results, syncGridSelection: MainTabControl.SelectedIndex == 0);
     }
 
@@ -388,25 +455,6 @@ public partial class MainWindow : Window
         }
 
         UpdateDetailNavigationButtons();
-    }
-
-    private void ShowSearchNothingFoundToolTip()
-    {
-        _searchNothingFoundToolTip ??= new ToolTip
-        {
-            Content = "Nothing Found",
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
-            StaysOpen = false
-        };
-
-        _searchNothingFoundToolTip.PlacementTarget = SearchBarBorder;
-        _searchNothingFoundToolTip.IsOpen = true;
-    }
-
-    private void CloseSearchNothingFoundToolTip()
-    {
-        if (_searchNothingFoundToolTip?.IsOpen == true)
-            _searchNothingFoundToolTip.IsOpen = false;
     }
 
     private void SearchTextBox_KeyDownHandler(object sender, KeyEventArgs e)
@@ -469,7 +517,6 @@ public partial class MainWindow : Window
 
     private void HideSearchBar()
     {
-        CloseSearchNothingFoundToolTip();
         SearchBarBorder.Visibility = Visibility.Collapsed;
         LoadBooks();
         FocusBooksDataGrid();
@@ -758,6 +805,51 @@ public partial class MainWindow : Window
         AppUtils.LoadCoverImage(full?.cover_image, CoverImage, NoImagePanel);
     }
 
+    private void CopyAuthorButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        CopyDetailTextToClipboard(DetailAuthorText);
+
+    private void CopyTitleButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        CopyDetailTextToClipboard(DetailTitleText);
+
+    private void CopyIsbnButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        CopyDetailTextToClipboard(DetailIsbnText);
+
+    private void CopyBookFileButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        CopyDetailTextToClipboard(DetailBookFileText);
+
+    private void OpenBookFileButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        var path = DetailBookFileText.Text.Trim();
+        if (string.IsNullOrEmpty(path))
+        {
+            AppUtils.ShowInfoMessage("No book file is set.");
+            return;
+        }
+
+        if (File.Exists(path) == false)
+        {
+            AppUtils.ShowErrorMessage($"File not found:\r\n{path}");
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to open file: {ex.Message}");
+        }
+    }
+
+    private static void CopyDetailTextToClipboard(TextBox textBox)
+    {
+        if (string.IsNullOrEmpty(textBox.Text))
+            return;
+
+        Clipboard.SetText(textBox.Text);
+    }
+
     private void ClearDetails()
     {
         DetailIdText.Text = string.Empty;
@@ -898,7 +990,82 @@ public partial class MainWindow : Window
             TotalCityCountText.Text = string.Format("Total City Count {0}", _cityRepository.Count());
     }
 
+    public bool SaveOptions()
+    {
+        if(_appOptionRepository is null)
+            return false;
+
+        var result = WindowOptionsPersistence.Save(_appOptionRepository, this, GetFullOptionName);
+        if (SaveBooksDataGridOptions() == false)
+            result = false;
+        if (_appOptionRepository.SetOptionAsLong(
+                GetFullOptionName(_SelectedTabIndexOptionName),
+                MainTabControl.SelectedIndex) == false)
+            result = false;
+
+        return result;
+    }
+
+    public bool LoadOptions()
+    {
+        var windowLoaded = ApplyWindowOptionsFromDatabase();
+        var gridLoaded = ApplyBooksDataGridOptionsFromDatabase();
+        var tabLoaded = ApplySelectedTabFromDatabase();
+        return windowLoaded || gridLoaded || tabLoaded;
+    }
+
+    private bool SaveBooksDataGridOptions()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        return SfDataGridOptionsPersistence.Save(
+            _appOptionRepository,
+            GetFullOptionName(_BooksDataGridOptionName),
+            BooksDataGrid);
+    }
+
+    private bool ApplyBooksDataGridOptionsFromDatabase()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        return SfDataGridOptionsPersistence.TryLoad(
+            _appOptionRepository,
+            GetFullOptionName(_BooksDataGridOptionName),
+            BooksDataGrid);
+    }
+
+    private bool ApplyWindowOptionsFromDatabase()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        return WindowOptionsPersistence.TryApply(
+            _appOptionRepository,
+            this,
+            GetFullOptionName,
+            MinWidth,
+            MinHeight);
+    }
+
+    private bool ApplySelectedTabFromDatabase()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        var tabIndex = _appOptionRepository.GetOptionAsLong(GetFullOptionName(_SelectedTabIndexOptionName));
+        if (tabIndex is null || tabIndex < 0 || tabIndex >= MainTabControl.Items.Count)
+            return false;
+
+        MainTabControl.SelectedIndex = (int)tabIndex.Value;
+        return true;
+    }
+
+    private string GetFullOptionName(string optionName) => $"{_OptionsPrefix}.{optionName}";
+
     private IAppSettings? _appSettings;
+    
     private IBookstoreRepositoryFactory? _repositoryFactory;
     private IBookRepository? _bookRepository;
     private IKpzRepository<long, group>? _groupRepository;
@@ -906,8 +1073,12 @@ public partial class MainWindow : Window
     private IKpzRepository<long, shop>? _shopRepository;
     private IKpzRepository<long, language>? _languageRepository;
     private IKpzRepository<long, city>? _cityRepository;
+    private IAppOptionRepository? _appOptionRepository;
+
     private ObservableCollection<book_ex>? _allBooksCollection;
     private int _currentBookIndex = -1;
     private ColumnChooser? _columnChooserWindow;
-    private ToolTip? _searchNothingFoundToolTip;
+    private const string _OptionsPrefix = "MainWindow";
+    private const string _BooksDataGridOptionName = "BooksDataGrid";
+    private const string _SelectedTabIndexOptionName = "SelectedTabIndex";
 }

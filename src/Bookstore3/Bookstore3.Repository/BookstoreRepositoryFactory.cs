@@ -13,4 +13,9 @@ public class BookstoreRepositoryFactory : KpzRepositorySqliteFactory, IBookstore
     {
         return new BookRepository(GetNewConnection(ConnectionString));
     }
+
+    public IAppOptionRepository GetAppOptionRepository()
+    {
+        return new AppOptionRepository(GetNewConnection(ConnectionString));
+    }
 }

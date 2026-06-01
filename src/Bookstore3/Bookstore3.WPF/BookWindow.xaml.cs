@@ -2,12 +2,14 @@ using Bookstore3.Model;
 using Bookstore3.Repository;
 using KpzRepository.Repository;
 using Microsoft.Win32;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Bookstore3.WPF;
 
-public partial class BookWindow : Window
+public partial class BookWindow : Window, IOptionsSavable
 {
     public long SavedBookId { get; private set; } = AppConstants.NullRecordId;
 
@@ -17,6 +19,7 @@ public partial class BookWindow : Window
 
         _repositoryFactory = repositoryFactory;
         _bookId = bookId;
+        _appOptionRepository = repositoryFactory.GetAppOptionRepository();
 
         _bookRepository = repositoryFactory.GetBookRepository();
         _groupRepository = repositoryFactory.GetBaseRepository<long, group>();
@@ -24,10 +27,54 @@ public partial class BookWindow : Window
         _shopRepository = repositoryFactory.GetBaseRepository<long, shop>();
         _languageRepository = repositoryFactory.GetBaseRepository<long, language>();
         _cityRepository = repositoryFactory.GetBaseRepository<long, city>();
+
+        try
+        {
+            ApplyWindowOptionsFromDatabase();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"An error occurred while loading window options: {ex.Message}");
+        }
+    }
+
+    public bool SaveOptions()
+    {
+        if (_appOptionRepository is null)
+            return false;
+
+        var result = WindowOptionsPersistence.Save(_appOptionRepository, this, GetFullOptionName);
+        if (_appOptionRepository.SetOptionAsLong(
+                GetFullOptionName(_SelectedTabIndexOptionName),
+                BookTabControl.SelectedIndex) == false)
+            result = false;
+
+        return result;
+    }
+
+    public bool LoadOptions()
+    {
+        var windowLoaded = ApplyWindowOptionsFromDatabase();
+        var tabLoaded = ApplySelectedTabFromDatabase();
+        return windowLoaded || tabLoaded;
+    }
+
+    private void BookWindow_ClosingHandler(object? sender, CancelEventArgs e)
+    {
+        try
+        {
+            SaveOptions();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to save options: {ex.Message}");
+        }
     }
 
     private void BookWindow_LoadedHandler(object sender, RoutedEventArgs e)
     {
+        ApplySelectedTabFromDatabase();
+
         if (_bookId == AppConstants.NullRecordId)
         {
             Title = "Add New Book";
@@ -286,6 +333,34 @@ public partial class BookWindow : Window
         }
     }
 
+    private string GetFullOptionName(string optionName) => $"{_OptionsPrefix}.{optionName}";
+
+    private bool ApplyWindowOptionsFromDatabase()
+    {
+        if(_appOptionRepository is null)
+            return false;
+
+        return WindowOptionsPersistence.TryApply(
+            _appOptionRepository,
+            this,
+            GetFullOptionName,
+            MinWidth,
+            MinHeight);
+    }
+
+    private bool ApplySelectedTabFromDatabase()
+    {
+        if(_appOptionRepository is null)
+            return false;
+
+        var tabIndex = _appOptionRepository.GetOptionAsLong(GetFullOptionName(_SelectedTabIndexOptionName));
+        if(tabIndex is null || tabIndex < 0 || tabIndex >= BookTabControl.Items.Count)
+            return false;
+
+        BookTabControl.SelectedIndex = (int)tabIndex.Value;
+        return true;
+    }
+
     private readonly IBookstoreRepositoryFactory _repositoryFactory;
     private readonly long _bookId;
 
@@ -295,6 +370,10 @@ public partial class BookWindow : Window
     private readonly IKpzRepository<long, shop> _shopRepository;
     private readonly IKpzRepository<long, language> _languageRepository;
     private readonly IKpzRepository<long, city> _cityRepository;
+    private readonly IAppOptionRepository? _appOptionRepository;
 
     private byte[]? _coverImageBytes;
+
+    private const string _OptionsPrefix = "BookWindow";
+    private const string _SelectedTabIndexOptionName = "SelectedTabIndex";
 }
