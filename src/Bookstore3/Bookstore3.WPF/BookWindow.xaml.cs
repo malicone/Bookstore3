@@ -9,6 +9,8 @@ namespace Bookstore3.WPF;
 
 public partial class BookWindow : Window
 {
+    public long SavedBookId { get; private set; } = AppConstants.NullRecordId;
+
     public BookWindow(IBookstoreRepositoryFactory repositoryFactory, long bookId = AppConstants.NullRecordId)
     {
         InitializeComponent();
@@ -111,6 +113,113 @@ public partial class BookWindow : Window
             return;
 
         BookFileTextBox.Text = dialog.FileName;
+    }
+
+    private void OkButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (!ValidateTitle())
+            return;
+
+        try
+        {
+            if (_bookId == AppConstants.NullRecordId)
+            {
+                var book = CreateBookFromForm();
+                book.crt_date_time = DateTime.Now;
+                _bookRepository.Add(book);
+                SavedBookId = book.id > 0 ? book.id : _bookRepository.GetMaxId();
+            }
+            else
+            {
+                var book = _bookRepository.Get(_bookId);
+                if (book is null)
+                {
+                    AppUtils.ShowErrorMessage("Book not found.");
+                    return;
+                }
+
+                ApplyFormToBook(book);
+                _bookRepository.Update(book);
+                SavedBookId = _bookId;
+            }
+
+            DialogResult = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to save book: {ex.Message}");
+        }
+    }
+
+    private bool ValidateTitle()
+    {
+        if (string.IsNullOrWhiteSpace(TitleTextBox.Text) == false)
+            return true;
+
+        AppUtils.ShowInfoMessage("Please enter Title.");
+        SwitchToMainDataTab();
+        TitleTextBox.Focus();
+        TitleTextBox.SelectAll();
+        return false;
+    }
+
+    private void SwitchToMainDataTab()
+    {
+        if (BookTabControl.SelectedItem != MainDataTabItem)
+            BookTabControl.SelectedItem = MainDataTabItem;
+    }
+
+    private book CreateBookFromForm()
+    {
+        var book = new book();
+        ApplyFormToBook(book);
+        return book;
+    }
+
+    private void ApplyFormToBook(book book)
+    {
+        book.title = TitleTextBox.Text.Trim();
+        book.author = NullIfWhiteSpace(AuthorTextBox.Text);
+        book.group_id = GetSelectedLong(GroupComboBox.SelectedValue);
+        book.isbn = NullIfWhiteSpace(IsbnTextBox.Text);
+        book.edition = EditionIntegerTextBox.Value.HasValue
+            ? (int)EditionIntegerTextBox.Value.Value
+            : 1;
+        book.page_count = PageCountIntegerTextBox.Value.HasValue
+            ? (int)PageCountIntegerTextBox.Value.Value
+            : null;
+        book.publisher_id = GetSelectedLong(PublisherComboBox.SelectedValue);
+        book.shop_id = GetSelectedLong(ShopComboBox.SelectedValue);
+        book.format = NullIfWhiteSpace(FormatTextBox.Text);
+        book.publish_year = PublishYearDatePicker.Value?.Year;
+        book.price = PriceDoubleTextBox.Value;
+        book.date_when_get = GotAtDateTimeEdit.DateTime;
+        book.wrapper = HardcoverCheckBox.IsChecked == true;
+        book.language_id = GetSelectedLong(LanguageComboBox.SelectedValue);
+        book.has_digit_copy = DigitalCopyCheckBox.IsChecked == true;
+        book.city_id = GetSelectedLong(CityComboBox.SelectedValue);
+        book.book_file = NullIfWhiteSpace(BookFileTextBox.Text);
+        book.annotation = NullIfWhiteSpace(AnnotationTextBox.Text);
+        book.details = NullIfWhiteSpace(DetailsTextBox.Text);
+        book.cover_image = _coverImageBytes;
+    }
+
+    private static string? NullIfWhiteSpace(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static long GetSelectedLong(object? selectedValue) =>
+        selectedValue switch
+        {
+            long id => id,
+            int intId => intId,
+            _ => AppConstants.UndefinedRecordId
+        };
+
+    private void CancelButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
     }
 
     private void CoverImageArea_SizeChanged(object sender, SizeChangedEventArgs e)

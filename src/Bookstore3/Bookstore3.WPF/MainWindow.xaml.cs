@@ -3,12 +3,23 @@ using Bookstore3.Model.Abstract;
 using Bookstore3.Repository;
 using Config.Net;
 using KpzRepository.Repository;
+using Microsoft.Win32;
+using Syncfusion.Pdf;
+using Syncfusion.Pdf.Graphics;
+using Syncfusion.Pdf.Grid;
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Converter;
+using Syncfusion.UI.Xaml.Grid.Helpers;
+using Syncfusion.UI.Xaml.ScrollAxis;
+using Syncfusion.XlsIO;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Drawing;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace Bookstore3.WPF;
@@ -20,6 +31,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         BooksDataGrid.SelectionChanged += BooksDataGrid_SelectionChanged;
         BooksDataGrid.SortColumnsChanging += BooksDataGrid_SortColumnsChanging;
+        BooksDataGrid.SortColumnsChanged += BooksDataGrid_SortColumnsChangedHandler;
+        BooksDataGrid.FilterChanged += BooksDataGrid_FilterChangedHandler;
+        BooksDataGrid.GroupExpanded += BooksDataGrid_GroupVisibilityChangedHandler;
+        BooksDataGrid.GroupCollapsed += BooksDataGrid_GroupVisibilityChangedHandler;
+        BooksDataGrid.CellDoubleTapped += BooksDataGrid_CellDoubleTappedHandler;
         LocationChanged += (_, _) => PositionColumnChooserIfVisible();
         SizeChanged += (_, _) => PositionColumnChooserIfVisible();
     }
@@ -43,6 +59,7 @@ public partial class MainWindow : Window
             LoadBooks();
             UpdateStatusBar();
             InitializeColumnChooser();
+            FocusBooksDataGrid();
         }
         catch (Exception ex)
         {
@@ -50,9 +67,21 @@ public partial class MainWindow : Window
         }
     }
 
+    private void FocusBooksDataGrid()
+    {
+        if (_allBooksCollection is { Count: > 0 })
+            SyncGridSelectionToCurrentBook();
+
+        BooksDataGrid.Dispatcher.BeginInvoke(() => BooksDataGrid.Focus(), DispatcherPriority.Loaded);
+    }
+
     private void RefreshDataButton_ClickHandler(object sender, RoutedEventArgs e)
     {
+        var selectedBookId = GetSelectedBookId();
         LoadBooks();
+        if (selectedBookId != AppConstants.NullRecordId)
+            NavigateToBookId(selectedBookId);
+        FocusBooksDataGrid();
         UpdateStatusBar();
     }
 
@@ -65,9 +94,74 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        bookWindow.ShowDialog();
+        if (bookWindow.ShowDialog() == true)
+        {
+            LoadBooks();
+            NavigateToBookId(bookWindow.SavedBookId);
+            UpdateStatusBar();
+        }
+    }
+
+    private void RecordEditButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        EditSelectedBook();
+
+    private void BooksDataGrid_CellDoubleTappedHandler(object? sender, GridCellDoubleTappedEventArgs e)
+    {
+        if (e.Record is not book_ex book)
+            return;
+
+        EditBook(book.id);
+    }
+
+    private void EditSelectedBook()
+    {
+        var bookId = GetSelectedBookId();
+        if (bookId == AppConstants.NullRecordId)
+        {
+            AppUtils.ShowInfoMessage("Please select a book to edit.");
+            return;
+        }
+
+        EditBook(bookId);
+    }
+
+    private void EditBook(long bookId)
+    {
+        if (_repositoryFactory is null)
+            return;
+
+        var bookWindow = new BookWindow(_repositoryFactory, bookId)
+        {
+            Owner = this
+        };
+        if (bookWindow.ShowDialog() == true)
+        {
+            LoadBooks();
+            NavigateToBookId(bookWindow.SavedBookId);
+            UpdateStatusBar();
+        }
+    }
+
+    private void DeleteRecordButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (_bookRepository is null)
+            return;
+
+        if (BooksDataGrid.SelectedItem is not book_ex selected)
+        {
+            AppUtils.ShowInfoMessage("Please select a book to delete.");
+            return;
+        }
+
+        var confirmResult = AppUtils.ShowConfirmMessage($"Delete book '{selected.title}'?", "Confirm Delete");
+        if (confirmResult == false)
+            return;
+
+        _bookRepository.Delete(selected.id);
         LoadBooks();
+        NavigateToBookId(_bookRepository.GetMaxId());
         UpdateStatusBar();
+        AppUtils.ShowInfoMessage("Book deleted successfully.");
     }
 
     private long GetSelectedBookId()
@@ -93,6 +187,127 @@ public partial class MainWindow : Window
     private void CitiesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
         ShowLookupWindow(_cityRepository, "Cities");
 
+    private void ExportToExcelMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        RunGridExport(ExportFormat.Excel);
+
+    private void ExportToCsvMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        RunGridExport(ExportFormat.Csv);
+
+    private void ExportToPdfMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
+        RunGridExport(ExportFormat.Pdf);
+
+    private void RunGridExport(ExportFormat format)
+    {
+        const string confirmMessage =
+            "The selected rows will be exported.\r\n\r\n" +
+            "• Ctrl+A — select all rows\r\n" +
+            "• Shift+click — select a range of rows\r\n" +
+            "• Ctrl+click — select individual rows\r\n\r\n" +
+            "Do you want to continue?";
+
+        if (AppUtils.ShowConfirmMessage(confirmMessage, "Confirm Export") == false)
+            return;
+
+        if (BooksDataGrid.SelectedItems.Count == 0)
+        {
+            AppUtils.ShowInfoMessage("Please select at least one row to export.");
+            return;
+        }
+
+        var (filter, defaultExtension) = format switch
+        {
+            ExportFormat.Excel => ("Excel Files (*.xlsx)|*.xlsx", ".xlsx"),
+            ExportFormat.Csv => ("CSV Files (*.csv)|*.csv", ".csv"),
+            ExportFormat.Pdf => ("PDF Files (*.pdf)|*.pdf", ".pdf"),
+            _ => throw new ArgumentOutOfRangeException(nameof(format))
+        };
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = filter,
+            DefaultExt = defaultExtension.TrimStart('.'),
+            FileName = BuildExportDefaultFileName(defaultExtension),
+            AddExtension = true
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            switch (format)
+            {
+                case ExportFormat.Excel:
+                    ExportSelectedRowsToExcel(dialog.FileName);
+                    break;
+                case ExportFormat.Csv:
+                    ExportSelectedRowsToCsv(dialog.FileName);
+                    break;
+                case ExportFormat.Pdf:
+                    ExportSelectedRowsToPdf(dialog.FileName);
+                    break;
+            }
+
+            AppUtils.ShowInfoMessage("Export completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Export failed: {ex.Message}");
+        }
+    }
+
+    private static string BuildExportDefaultFileName(string extension)
+    {
+        var timestamp = DateTime.Now
+            .ToString(AppConstants.ExportFileNameDateTimeFormat, CultureInfo.InvariantCulture);
+        return $"Books_list_export_{timestamp}{extension}";
+    }
+
+    private void ExportSelectedRowsToExcel(string filePath)
+    {
+        var options = new ExcelExportingOptions
+        {
+            ExcelVersion = ExcelVersion.Excel2016
+        };
+
+        using var excelEngine = BooksDataGrid.ExportToExcel(BooksDataGrid.SelectedItems, options);
+        excelEngine.Excel.Workbooks[0].SaveAs(filePath);
+    }
+
+    private void ExportSelectedRowsToCsv(string filePath)
+    {
+        var options = new ExcelExportingOptions
+        {
+            ExcelVersion = ExcelVersion.Excel2016
+        };
+
+        using var excelEngine = BooksDataGrid.ExportToExcel(BooksDataGrid.SelectedItems, options);
+        excelEngine.Excel.Workbooks[0].SaveAs(filePath, ",");
+    }
+
+    private void ExportSelectedRowsToPdf(string filePath)
+    {
+        var options = new PdfExportingOptions
+        {
+            ExportGroups = false,
+            ExportGroupSummary = false,
+            ExportTableSummary = true
+        };
+
+        using var document = new PdfDocument();
+        document.PageSettings.Orientation = PdfPageOrientation.Landscape;
+        var page = document.Pages.Add();
+        var pdfGrid = BooksDataGrid.ExportToPdfGrid(BooksDataGrid.SelectedItems, options);
+        var format = new PdfGridLayoutFormat
+        {
+            Layout = PdfLayoutType.Paginate,
+            Break = PdfLayoutBreakType.FitPage
+        };
+        pdfGrid.Draw(page, new PointF(0, 0), format);
+        document.Save(filePath);
+        document.Close(true);
+    }
+
     private void ShowLookupWindow<TEntity>(IKpzRepository<long, TEntity>? repository, string title)
         where TEntity : lookup_entity, new()
     {
@@ -116,6 +331,155 @@ public partial class MainWindow : Window
         PositionColumnChooser();
         _columnChooserWindow!.Show();
         _columnChooserWindow.Activate();
+    }
+
+    private void SearchButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (IsSearchBarVisible)
+            HideSearchBar();
+        else
+            ShowSearchBar();
+    }
+
+    private void SearchBarCloseButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        HideSearchBar();
+
+    private void RunTheSearchButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        RunTheSearch();
+
+    private void RunTheSearch()
+    {
+        if (_bookRepository is null || !IsSearchBarVisible)
+            return;
+
+        CloseSearchNothingFoundToolTip();
+
+        var results = _bookRepository.SearchBooksLightweight(SearchTextBox.Text).ToList();
+        if (results.Count == 0)
+        {
+            ApplySearchResultsToGrid(results, syncGridSelection: MainTabControl.SelectedIndex == 0);
+            ShowSearchNothingFoundToolTip();
+            return;
+        }
+
+        ApplySearchResultsToGrid(results, syncGridSelection: MainTabControl.SelectedIndex == 0);
+    }
+
+    private void ApplySearchResultsToGrid(IReadOnlyList<book_ex> books, bool syncGridSelection)
+    {
+        _allBooksCollection = new ObservableCollection<book_ex>(books);
+        BooksDataGrid.ItemsSource = _allBooksCollection;
+        ApplyDefaultGridSort();
+
+        if (books.Count > 0)
+        {
+            _currentBookIndex = 0;
+            DisplayCurrentBook();
+            if (syncGridSelection)
+                NavigateToVisibleBook(books[0]);
+            else
+                BooksDataGrid.SelectedItem = books[0];
+        }
+        else
+        {
+            _currentBookIndex = -1;
+            BooksDataGrid.SelectedItem = null;
+            ClearDetails();
+        }
+
+        UpdateDetailNavigationButtons();
+    }
+
+    private void ShowSearchNothingFoundToolTip()
+    {
+        _searchNothingFoundToolTip ??= new ToolTip
+        {
+            Content = "Nothing Found",
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Top,
+            StaysOpen = false
+        };
+
+        _searchNothingFoundToolTip.PlacementTarget = SearchBarBorder;
+        _searchNothingFoundToolTip.IsOpen = true;
+    }
+
+    private void CloseSearchNothingFoundToolTip()
+    {
+        if (_searchNothingFoundToolTip?.IsOpen == true)
+            _searchNothingFoundToolTip.IsOpen = false;
+    }
+
+    private void SearchTextBox_KeyDownHandler(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            RunTheSearch();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            HideSearchBar();
+            e.Handled = true;
+        }
+    }
+
+    private void MainWindow_PreviewKeyDownHandler(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && IsSearchBarVisible)
+        {
+            HideSearchBar();
+            e.Handled = true;
+        }
+    }
+
+    private void MainWindow_PreviewTextInputHandler(object sender, TextCompositionEventArgs e)
+    {
+        if ((ShouldCaptureSearchInput() == false) || string.IsNullOrEmpty(e.Text))
+            return;
+
+        if (IsSearchBarVisible == false)
+        {
+            ShowSearchBar();
+            AppendToSearchTextBox(e.Text);
+            e.Handled = true;
+            return;
+        }
+
+        if (SearchTextBox.IsKeyboardFocusWithin == false)
+        {
+            SearchTextBox.Focus();
+            AppendToSearchTextBox(e.Text);
+            e.Handled = true;
+        }
+    }
+
+    private bool ShouldCaptureSearchInput() =>
+        MainTabControl.SelectedIndex is 0 or 1;
+
+    private bool IsSearchBarVisible => SearchBarBorder.Visibility == Visibility.Visible;
+
+    private void ShowSearchBar()
+    {
+        SearchBarBorder.Visibility = Visibility.Visible;
+        SearchTextBox.Focus();
+        SearchTextBox.CaretIndex = SearchTextBox.Text.Length;
+    }
+
+    private void HideSearchBar()
+    {
+        CloseSearchNothingFoundToolTip();
+        SearchBarBorder.Visibility = Visibility.Collapsed;
+        LoadBooks();
+        FocusBooksDataGrid();
+    }
+
+    private void AppendToSearchTextBox(string text)
+    {
+        SearchTextBox.Focus();
+        SearchTextBox.Text += text;
+        SearchTextBox.CaretIndex = SearchTextBox.Text.Length;
     }
 
     private void InitializeColumnChooser()
@@ -228,7 +592,41 @@ public partial class MainWindow : Window
                     BooksDataGrid.SortColumnDescriptions.Clear();
                     break;
             }
+
+            UpdateDetailNavigationButtons();
         }, DispatcherPriority.ApplicationIdle);
+    }
+
+    private void BooksDataGrid_SortColumnsChangedHandler(object? sender, GridSortColumnsChangedEventArgs e) =>
+        UpdateDetailNavigationButtons();
+
+    private void BooksDataGrid_FilterChangedHandler(object? sender, GridFilterEventArgs e)
+    {
+        BooksDataGrid.Dispatcher.BeginInvoke(SyncVisibleGridSelection, DispatcherPriority.Loaded);
+    }
+
+    private void BooksDataGrid_GroupVisibilityChangedHandler(object? sender, GroupChangedEventArgs e) =>
+        UpdateDetailNavigationButtons();
+
+    private void SyncVisibleGridSelection()
+    {
+        if (BooksDataGrid.SelectedItem is book_ex selected &&
+            BooksDataGrid.ResolveToRowIndex(selected) >= 0)
+        {
+            _currentBookIndex = FindBookIndexById(selected.id);
+            DisplayCurrentBook();
+            UpdateDetailNavigationButtons();
+            return;
+        }
+
+        NavigateToFirstVisibleBook();
+        if (BooksDataGrid.SelectedItem is null)
+        {
+            _currentBookIndex = -1;
+            ClearDetails();
+        }
+
+        UpdateDetailNavigationButtons();
     }
 
     private void BooksDataGrid_SelectionChanged(object? sender, GridSelectionChangedEventArgs e)
@@ -245,37 +643,34 @@ public partial class MainWindow : Window
         UpdateDetailNavigationButtons();
     }
 
-    private void DetailFirstButton_ClickHandler(object sender, RoutedEventArgs e)
-    {
-        NavigateToBookId(_bookRepository?.GetMinId());
-    }
+    private void DetailFirstButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        NavigateToFirstVisibleBook();
 
     private void DetailPreviousButton_ClickHandler(object sender, RoutedEventArgs e)
     {
-        if (_allBooksCollection is null || _currentBookIndex <= 0)
+        var recordIndex = GetCurrentRecordIndex();
+        if (recordIndex <= 0)
             return;
 
-        _currentBookIndex--;
-        DisplayCurrentBook();
-        SyncGridSelectionToCurrentBook();
-        UpdateDetailNavigationButtons();
+        var book = GetBookAtVisibleRecordIndex(recordIndex - 1);
+        if (book is not null)
+            NavigateToVisibleBook(book);
     }
 
     private void DetailNextButton_ClickHandler(object sender, RoutedEventArgs e)
     {
-        if (_allBooksCollection is null || _currentBookIndex < 0 || _currentBookIndex >= _allBooksCollection.Count - 1)
+        var recordIndex = GetCurrentRecordIndex();
+        var recordCount = GetVisibleRecordCount();
+        if (recordIndex < 0 || recordIndex >= recordCount - 1)
             return;
 
-        _currentBookIndex++;
-        DisplayCurrentBook();
-        SyncGridSelectionToCurrentBook();
-        UpdateDetailNavigationButtons();
+        var book = GetBookAtVisibleRecordIndex(recordIndex + 1);
+        if (book is not null)
+            NavigateToVisibleBook(book);
     }
 
-    private void DetailLastButton_ClickHandler(object sender, RoutedEventArgs e)
-    {
-        NavigateToBookId(_bookRepository?.GetMaxId());
-    }
+    private void DetailLastButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        NavigateToLastVisibleBook();
 
     private void NavigateToBookId(long? bookId)
     {
@@ -286,9 +681,43 @@ public partial class MainWindow : Window
         if (index < 0)
             return;
 
+        NavigateToVisibleBook(_allBooksCollection[index]);
+    }
+
+    private void NavigateToFirstVisibleBook()
+    {
+        var book = GetBookAtVisibleRecordIndex(0);
+        if (book is not null)
+            NavigateToVisibleBook(book);
+    }
+
+    private void NavigateToLastVisibleBook()
+    {
+        var recordCount = GetVisibleRecordCount();
+        if (recordCount == 0)
+            return;
+
+        var book = GetBookAtVisibleRecordIndex(recordCount - 1);
+        if (book is not null)
+            NavigateToVisibleBook(book);
+    }
+
+    private void NavigateToVisibleBook(book_ex book)
+    {
+        var index = FindBookIndexById(book.id);
+        if (index < 0)
+            return;
+
         _currentBookIndex = index;
+
+        var rowIndex = BooksDataGrid.ResolveToRowIndex(book);
+        if (rowIndex >= 0)
+        {
+            BooksDataGrid.SelectedItem = book;
+            ScrollBookIntoView(book);
+        }
+
         DisplayCurrentBook();
-        SyncGridSelectionToCurrentBook();
         UpdateDetailNavigationButtons();
     }
 
@@ -313,7 +742,7 @@ public partial class MainWindow : Window
         DetailFormatText.Text = summary.format ?? string.Empty;
         DetailIsbnText.Text = summary.isbn ?? string.Empty;
         DetailPageCountText.Text = summary.page_count?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-        DetailPriceText.Text = summary.price?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        DetailPriceText.Text = AppUtils.FormatPrice(summary.price);
         DetailPublishYearText.Text = summary.publish_year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
         DetailGotAtText.Text = AppUtils.FormatDateTime(summary.date_when_get);
         DetailHardcoverText.Text = summary.wrapper ? "Yes" : "No";
@@ -357,9 +786,10 @@ public partial class MainWindow : Window
 
     private void UpdateDetailNavigationButtons()
     {
-        var hasBooks = _allBooksCollection is { Count: > 0 } && _currentBookIndex >= 0;
+        var recordIndex = GetCurrentRecordIndex();
+        var recordCount = GetVisibleRecordCount();
 
-        if (!hasBooks || _bookRepository is null)
+        if (recordIndex < 0 || recordCount == 0)
         {
             DetailFirstButton.IsEnabled = false;
             DetailPreviousButton.IsEnabled = false;
@@ -368,14 +798,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var currentId = _allBooksCollection![_currentBookIndex].id;
-        var minId = _bookRepository.GetMinId();
-        var maxId = _bookRepository.GetMaxId();
-
-        DetailFirstButton.IsEnabled = currentId != minId;
-        DetailPreviousButton.IsEnabled = _currentBookIndex > 0;
-        DetailNextButton.IsEnabled = _currentBookIndex < _allBooksCollection.Count - 1;
-        DetailLastButton.IsEnabled = currentId != maxId;
+        DetailFirstButton.IsEnabled = recordIndex > 0;
+        DetailPreviousButton.IsEnabled = recordIndex > 0;
+        DetailNextButton.IsEnabled = recordIndex < recordCount - 1;
+        DetailLastButton.IsEnabled = recordIndex < recordCount - 1;
     }
 
     private void SyncGridSelectionToCurrentBook()
@@ -383,7 +809,58 @@ public partial class MainWindow : Window
         if (_allBooksCollection is null || _currentBookIndex < 0 || _currentBookIndex >= _allBooksCollection.Count)
             return;
 
-        BooksDataGrid.SelectedItem = _allBooksCollection[_currentBookIndex];
+        NavigateToVisibleBook(_allBooksCollection[_currentBookIndex]);
+    }
+
+    private book_ex? GetCurrentBook()
+    {
+        if (BooksDataGrid.SelectedItem is book_ex selected)
+            return selected;
+
+        if (_allBooksCollection is not null &&
+            _currentBookIndex >= 0 &&
+            _currentBookIndex < _allBooksCollection.Count)
+            return _allBooksCollection[_currentBookIndex];
+
+        return null;
+    }
+
+    private int GetCurrentRecordIndex()
+    {
+        var book = GetCurrentBook();
+        if (book is null)
+            return -1;
+
+        var rowIndex = BooksDataGrid.ResolveToRowIndex(book);
+        if (rowIndex < 0)
+            return -1;
+
+        return BooksDataGrid.ResolveToRecordIndex(rowIndex);
+    }
+
+    private int GetVisibleRecordCount() =>
+        SelectionHelper.GetRecordsCount(BooksDataGrid, checkUnBoundRows: false);
+
+    private book_ex? GetBookAtVisibleRecordIndex(int recordIndex)
+    {
+        if (recordIndex < 0 || recordIndex >= GetVisibleRecordCount())
+            return null;
+
+        var rowIndex = BooksDataGrid.ResolveToRowIndex(recordIndex);
+        if (rowIndex < 0)
+            return null;
+
+        return SelectionHelper.GetRecordAtRowIndex(BooksDataGrid, rowIndex) as book_ex;
+    }
+
+    private void ScrollBookIntoView(book_ex book)
+    {
+        BooksDataGrid.Dispatcher.BeginInvoke(() =>
+        {
+            var rowIndex = BooksDataGrid.ResolveToRowIndex(book);
+            if (rowIndex >= 0)
+                BooksDataGrid.ScrollInView(new RowColumnIndex(rowIndex, 0));
+        }, DispatcherPriority.Loaded);
     }
 
     private int FindBookIndexById(long bookId)
@@ -410,6 +887,15 @@ public partial class MainWindow : Window
 
         if (_shopRepository is not null)
             TotalShopCountText.Text = string.Format("Total Shop Count {0}", _shopRepository.Count());
+
+        if (_publisherRepository is not null)
+            TotalPublisherCountText.Text = string.Format("Total Publisher Count {0}", _publisherRepository.Count());
+
+        if (_languageRepository is not null)
+            TotalLanguageCountText.Text = string.Format("Total Language Count {0}", _languageRepository.Count());
+
+        if (_cityRepository is not null)
+            TotalCityCountText.Text = string.Format("Total City Count {0}", _cityRepository.Count());
     }
 
     private IAppSettings? _appSettings;
@@ -423,4 +909,5 @@ public partial class MainWindow : Window
     private ObservableCollection<book_ex>? _allBooksCollection;
     private int _currentBookIndex = -1;
     private ColumnChooser? _columnChooserWindow;
+    private ToolTip? _searchNothingFoundToolTip;
 }

@@ -15,6 +15,12 @@ public static class AppUtils
     public static string FormatDateTime(DateTime? dateTime) =>
         dateTime.HasValue ? FormatDateTime(dateTime.Value) : string.Empty;
 
+    public static string FormatPrice(double price) =>
+        price.ToString(AppConstants.DefaultPriceFormat, CultureInfo.InvariantCulture);
+
+    public static string FormatPrice(double? price) =>
+        price.HasValue ? FormatPrice(price.Value) : string.Empty;
+
     public static void ShowErrorMessage(string message, string title = "Error")
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
@@ -22,6 +28,11 @@ public static class AppUtils
     public static void ShowInfoMessage(string message, string title = "Information")
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+    public static bool ShowConfirmMessage(string message, string title = "Confirmation")
+    {
+        var result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
+        return result == MessageBoxResult.Yes;
     }
 
     public static byte[] RotateImageBytes(byte[] imageBytes, double angle)

@@ -89,9 +89,37 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="4" />
         </Style>
+        <Style x:Key="DialogButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="90" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Padding" Value="12,4" />
+        </Style>
     </Window.Resources>
 
-    <TabControl Margin="8">
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                BorderThickness="0,1,0,0"
+                Padding="8,8,8,8"
+                Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button x:Name="OkButton"
+                        Content="OK"
+                        Style="{StaticResource DialogButtonStyle}"
+                        IsDefault="True"
+                        Click="OkButton_ClickHandler" />
+                <Button x:Name="CancelButton"
+                        Content="Cancel"
+                        Style="{StaticResource DialogButtonStyle}"
+                        IsCancel="True"
+                        Click="CancelButton_ClickHandler" />
+            </StackPanel>
+        </Border>
+
+        <TabControl x:Name="BookTabControl" Margin="8">
         <TabItem Header="Cover Image">
             <DockPanel LastChildFill="True">
                 <Border DockPanel.Dock="Top"
@@ -171,7 +199,7 @@
             </DockPanel>
         </TabItem>
 
-        <TabItem Header="Main Data">
+        <TabItem x:Name="MainDataTabItem" Header="Main Data">
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="0,0,8,0"
@@ -196,14 +224,14 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Author" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Title" Style="{StaticResource MainDataLabelStyle}" />
                     <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3"
-                             x:Name="AuthorTextBox"
+                             x:Name="TitleTextBox"
                              Style="{StaticResource MainDataTextBoxStyle}" />
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Title" Style="{StaticResource MainDataLabelStyle}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Author" Style="{StaticResource MainDataLabelStyle}" />
                     <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
-                             x:Name="TitleTextBox"
+                             x:Name="AuthorTextBox"
                              Style="{StaticResource MainDataTextBoxStyle}" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Group" Style="{StaticResource MainDataLabelStyle}" />
@@ -211,7 +239,7 @@
                                             x:Name="GroupComboBox"
                                             DisplayMemberPath="name"
                                             SelectedValuePath="id"
-                                            IsEditable="False"
+                                            IsEditable="False"                                            
                                             Style="{StaticResource MainDataComboBoxStyle}" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="ISBN" Style="{StaticResource MainDataLabelStyle}" />
@@ -259,7 +287,7 @@
                                               x:Name="PriceDoubleTextBox"
                                               NumberDecimalDigits="2"
                                               Style="{StaticResource MainDataDoubleTextBoxStyle}" />
-                    <TextBlock Grid.Row="7" Grid.Column="2" Text="Got At" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
+                    <TextBlock Grid.Row="7" Grid.Column="2" Text="Received At" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
                     <syncfusion:DateTimeEdit Grid.Row="7" Grid.Column="3"
                                              x:Name="GotAtDateTimeEdit"
                                              Pattern="CustomPattern"
@@ -298,7 +326,6 @@
                         </Grid.ColumnDefinitions>
                         <TextBox Grid.Column="0"
                                  x:Name="BookFileTextBox"
-                                 IsReadOnly="True"
                                  Style="{StaticResource MainDataTextBoxStyle}" />
                         <Button Grid.Column="1"
                                 x:Name="ChooseBookFileButton"
@@ -322,4 +349,5 @@
                      Style="{StaticResource MultilineTextBoxStyle}" />
         </TabItem>
     </TabControl>
+    </DockPanel>
 </Window>
