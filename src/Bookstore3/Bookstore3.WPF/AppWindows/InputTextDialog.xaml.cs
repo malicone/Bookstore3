@@ -1,6 +1,7 @@
-﻿using System.Windows;
+﻿using Bookstore3.WPF.Utils;
+using System.Windows;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.AppWindows;
 
 /// <summary>
 /// Interaction logic for InputTextDialog.xaml

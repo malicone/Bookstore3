@@ -1,5 +1,7 @@
 ﻿using Bookstore3.Model.Abstract;
 using Bookstore3.Repository;
+using Bookstore3.WPF.Options;
+using Bookstore3.WPF.Utils;
 using KpzRepository.Repository;
 using MahApps.Metro.IconPacks;
 using Syncfusion.Data;
@@ -11,7 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.AppWindows;
 
 public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLookupEntity : lookup_entity, new()
 {

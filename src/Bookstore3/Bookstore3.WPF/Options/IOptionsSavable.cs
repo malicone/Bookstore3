@@ -1,4 +1,4 @@
-﻿namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Options;
 
 public interface IOptionsSavable
 {

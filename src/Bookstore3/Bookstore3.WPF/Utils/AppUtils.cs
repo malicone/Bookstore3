@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Utils;
 
 public static class AppUtils
 {
@@ -25,10 +25,12 @@ public static class AppUtils
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
     public static void ShowInfoMessage(string message, string title = "Information")
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
     public static bool ShowConfirmMessage(string message, string title = "Confirmation")
     {
         var result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);

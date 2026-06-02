@@ -1,7 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows.Media;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Utils;
 
 public enum ExportFormat
 {
@@ -20,9 +20,9 @@ public static class AppConstants
 
     public static string DefaultPriceDataFormatString =>
         string.Create(CultureInfo.InvariantCulture, $"{{0:{DefaultPriceFormat}}}");
-    
+
     public const string GridCellBorderColor = "#E0E0E0";
-    
+
     public const long NullRecordId = long.MinValue;
     public const long UndefinedRecordId = 0;
 

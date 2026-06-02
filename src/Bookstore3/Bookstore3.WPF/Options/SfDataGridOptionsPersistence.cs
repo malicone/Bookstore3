@@ -2,7 +2,7 @@ using Bookstore3.Repository;
 using Syncfusion.UI.Xaml.Grid;
 using System.IO;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Options;
 
 internal static class SfDataGridOptionsPersistence
 {

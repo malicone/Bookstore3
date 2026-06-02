@@ -1,6 +1,8 @@
 ﻿using Bookstore3.Model;
 using Bookstore3.Model.Abstract;
 using Bookstore3.Repository;
+using Bookstore3.WPF.Options;
+using Bookstore3.WPF.Utils;
 using Config.Net;
 using KpzRepository.Repository;
 using Microsoft.Win32;
@@ -25,7 +27,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.AppWindows;
 
 public partial class MainWindow : Window, IOptionsSavable
 {
@@ -231,6 +233,21 @@ public partial class MainWindow : Window, IOptionsSavable
             return selected.id;
 
         return AppConstants.NullRecordId;
+    }
+
+    private void OptionsButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (_appOptionRepository is null)
+            InitializeRepositories();
+
+        if (_appOptionRepository is null)
+            return;
+
+        var optionsWindow = new OptionsWindow(_appOptionRepository)
+        {
+            Owner = this
+        };
+        optionsWindow.ShowDialog();
     }
 
     private void GroupsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>

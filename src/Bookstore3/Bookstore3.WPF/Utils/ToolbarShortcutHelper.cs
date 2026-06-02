@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Utils;
 
 internal static class ToolbarShortcutHelper
 {

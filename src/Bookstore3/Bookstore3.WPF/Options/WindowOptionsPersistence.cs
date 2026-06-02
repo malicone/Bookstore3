@@ -1,7 +1,7 @@
 using Bookstore3.Repository;
 using System.Windows;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.Options;
 
 internal static class WindowOptionsPersistence
 {

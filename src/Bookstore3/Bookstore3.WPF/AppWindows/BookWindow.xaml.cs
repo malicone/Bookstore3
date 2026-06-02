@@ -1,13 +1,19 @@
 using Bookstore3.Model;
+using Bookstore3.Model.Abstract;
 using Bookstore3.Repository;
+using Bookstore3.WPF.AITools;
+using Bookstore3.WPF.Options;
+using Bookstore3.WPF.Utils;
 using KpzRepository.Repository;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
-namespace Bookstore3.WPF;
+namespace Bookstore3.WPF.AppWindows;
 
 public partial class BookWindow : Window, IOptionsSavable
 {
@@ -18,6 +24,7 @@ public partial class BookWindow : Window, IOptionsSavable
         InitializeComponent();
 
         _repositoryFactory = repositoryFactory;
+        _stringCipher = new AesStringCipher();
         _bookId = bookId;
         _appOptionRepository = repositoryFactory.GetAppOptionRepository();
 
@@ -28,6 +35,12 @@ public partial class BookWindow : Window, IOptionsSavable
         _languageRepository = repositoryFactory.GetBaseRepository<long, language>();
         _cityRepository = repositoryFactory.GetBaseRepository<long, city>();
 
+        if (_appOptionRepository is not null)
+        {
+            _openAiBookMetadataService = new OpenAiBookMetadataService(_appOptionRepository, _stringCipher);
+            _googleAiBookMetadataService = new GoogleAiBookMetadataService(_appOptionRepository, _stringCipher);
+        }
+
         try
         {
             ApplyWindowOptionsFromDatabase();
@@ -35,6 +48,58 @@ public partial class BookWindow : Window, IOptionsSavable
         catch (Exception ex)
         {
             AppUtils.ShowErrorMessage($"An error occurred while loading window options: {ex.Message}");
+        }
+    }
+
+    private async void FetchFromOpenAiButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        await FetchMetadataAsync(_openAiBookMetadataService, FetchFromOpenAiButton, "Open AI");
+
+    private async void FetchFromGoogleAiButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        await FetchMetadataAsync(_googleAiBookMetadataService, FetchFromGoogleAiButton, "Google AI");
+
+    private async Task FetchMetadataAsync(
+        IAiBookMetadataService? metadataService,
+        Button fetchButton,
+        string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(TitleTextBox.Text))
+        {
+            AppUtils.ShowInfoMessage("Please enter Title.");
+            SwitchToMainDataTab();
+            TitleTextBox.Focus();
+            return;
+        }
+
+        if (metadataService is null)
+        {
+            AppUtils.ShowErrorMessage("Application options are not available.");
+            return;
+        }
+
+        fetchButton.IsEnabled = false;
+        var originalToolTip = fetchButton.ToolTip;
+        fetchButton.ToolTip = $"Fetching metadata from {providerName}...";
+
+        try
+        {
+            var author = string.IsNullOrWhiteSpace(AuthorTextBox.Text) ? null : AuthorTextBox.Text.Trim();
+            var metadata = await metadataService.FetchMetadataAsync(
+                TitleTextBox.Text.Trim(),
+                author,
+                CancellationToken.None);
+
+            ApplyFetchedMetadata(metadata);
+            await DownloadAndApplyCoverImageAsync(metadata.coverImageUrl);
+            AppUtils.ShowInfoMessage($"Book metadata fetched from {providerName}.");
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to fetch metadata: {ex.Message}");
+        }
+        finally
+        {
+            fetchButton.IsEnabled = true;
+            fetchButton.ToolTip = originalToolTip;
         }
     }
 
@@ -120,6 +185,77 @@ public partial class BookWindow : Window, IOptionsSavable
         ShopComboBox.SelectedValue = AppConstants.UndefinedRecordId;
         LanguageComboBox.SelectedValue = AppConstants.UndefinedRecordId;
         CityComboBox.SelectedValue = AppConstants.UndefinedRecordId;
+    }
+
+    private void ApplyFetchedMetadata(BookMetadataResult metadata)
+    {
+        TitleTextBox.Text = metadata.title ?? string.Empty;
+        AuthorTextBox.Text = metadata.author ?? string.Empty;
+        IsbnTextBox.Text = metadata.isbn ?? string.Empty;
+        PageCountIntegerTextBox.Value = metadata.pageCount;
+        EditionIntegerTextBox.Value = metadata.edition;
+        FormatTextBox.Text = metadata.format ?? string.Empty;
+        PublishYearDatePicker.Value = metadata.publishYear.HasValue
+            ? new DateTime(metadata.publishYear.Value, 1, 1)
+            : null;
+        PriceDoubleTextBox.Value = metadata.price;
+        AnnotationTextBox.Text = metadata.annotation ?? string.Empty;
+
+        TrySelectLookupByName(GroupComboBox, metadata.@group);
+        TrySelectLookupByName(PublisherComboBox, metadata.publisher);
+        TrySelectLookupByName(LanguageComboBox, metadata.language);
+        TrySelectLookupByName(CityComboBox, metadata.city);
+    }
+
+    private static void TrySelectLookupByName(Selector selector, string? lookupName)
+    {
+        if (string.IsNullOrWhiteSpace(lookupName) || selector.ItemsSource is null)
+            return;
+
+        var normalizedTarget = NormalizeLookup(lookupName);
+        foreach (var item in selector.ItemsSource)
+        {
+            if (item is not lookup_entity lookup || string.IsNullOrWhiteSpace(lookup.name))
+                continue;
+
+            if (NormalizeLookup(lookup.name) == normalizedTarget)
+            {
+                selector.SelectedValue = lookup.id;
+                return;
+            }
+        }
+    }
+
+    private static string NormalizeLookup(string value) =>
+        value.Trim().ToLowerInvariant();
+
+    private async Task DownloadAndApplyCoverImageAsync(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return;
+
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) == false ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            return;
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            const int maxImageBytes = 5 * 1024 * 1024;
+            if (memoryStream.Length > maxImageBytes)
+                throw new InvalidOperationException("Cover image is too large.");
+
+            _coverImageBytes = AppUtils.LoadCoverImage(memoryStream.ToArray(), CoverImage, NoImagePanel);
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowInfoMessage($"Cover image was not loaded: {ex.Message}");
+        }
     }
 
     private void LoadMainDataFromBook(book book)
@@ -371,6 +507,10 @@ public partial class BookWindow : Window, IOptionsSavable
     private readonly IKpzRepository<long, language> _languageRepository;
     private readonly IKpzRepository<long, city> _cityRepository;
     private readonly IAppOptionRepository? _appOptionRepository;
+    private readonly IStringCipher _stringCipher;
+    private readonly IAiBookMetadataService? _openAiBookMetadataService;
+    private readonly IAiBookMetadataService? _googleAiBookMetadataService;
+    private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     private byte[]? _coverImageBytes;
 

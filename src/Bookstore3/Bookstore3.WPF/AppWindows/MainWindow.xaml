@@ -1,10 +1,11 @@
-﻿<Window x:Class="Bookstore3.WPF.MainWindow"
+﻿<Window x:Class="Bookstore3.WPF.AppWindows.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         xmlns:local="clr-namespace:Bookstore3.WPF"
+        xmlns:utils="clr-namespace:Bookstore3.WPF.Utils"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         mc:Ignorable="d"
         Title="Bookstore 3.0"
@@ -61,11 +62,11 @@
             <Setter Property="Foreground" Value="Black" />
         </Style>
         <Style TargetType="syncfusion:GridCell">
-            <Setter Property="BorderBrush" Value="{x:Static local:AppConstants.GridCellBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{x:Static utils:AppConstants.GridCellBorderBrush}" />
         </Style>
         <Style TargetType="syncfusion:GridTableSummaryCell">
             <Setter Property="HorizontalContentAlignment" Value="Right" />
-            <Setter Property="BorderBrush" Value="{x:Static local:AppConstants.GridCellBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{x:Static utils:AppConstants.GridCellBorderBrush}" />
         </Style>
     </Window.Resources>
 
@@ -126,6 +127,18 @@
                         <StackPanel Orientation="Horizontal">
                             <iconPacks:PackIconMaterial Kind="Magnify" Style="{StaticResource ToolbarIconStyle}" />
                             <TextBlock Text="Search" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Separator />
+
+                    <Button x:Name="OptionsButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Options"
+                            Click="OptionsButton_ClickHandler">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Cog" Style="{StaticResource ToolbarIconStyle}" />
+                            <TextBlock Text="Options" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
@@ -368,7 +381,7 @@
                                                          HeaderText="Created At"
                                                          Width="160"
                                                          Pattern="CustomPattern"
-                                                         CustomPattern="{x:Static local:AppConstants.DefaultDateTimeFormat}" />
+                                                         CustomPattern="{x:Static utils:AppConstants.DefaultDateTimeFormat}" />
                             <syncfusion:GridTextColumn MappingName="author"
                                                        HeaderText="Author"
                                                        Width="160" />
@@ -405,14 +418,14 @@
                                                        TextAlignment="Right">
                                 <syncfusion:GridTextColumn.DisplayBinding>
                                     <Binding Path="price"
-                                             StringFormat="{x:Static local:AppConstants.DefaultPriceDataFormatString}" />
+                                             StringFormat="{x:Static utils:AppConstants.DefaultPriceDataFormatString}" />
                                 </syncfusion:GridTextColumn.DisplayBinding>
                             </syncfusion:GridTextColumn>
                             <syncfusion:GridDateTimeColumn MappingName="date_when_get"
                                                          HeaderText="Received At"
                                                          Width="160"
                                                          Pattern="CustomPattern"
-                                                         CustomPattern="{x:Static local:AppConstants.DefaultDateTimeFormat}" />
+                                                         CustomPattern="{x:Static utils:AppConstants.DefaultDateTimeFormat}" />
                             <syncfusion:GridCheckBoxColumn MappingName="wrapper"
                                                          HeaderText="Hardcopy"
                                                          AllowEditing="False"
