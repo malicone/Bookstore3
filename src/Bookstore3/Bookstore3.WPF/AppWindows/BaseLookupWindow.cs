@@ -6,24 +6,28 @@ using KpzRepository.Repository;
 using MahApps.Metro.IconPacks;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid.Helpers;
+using Syncfusion.UI.Xaml.ScrollAxis;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Bookstore3.WPF.AppWindows;
 
 public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLookupEntity : lookup_entity, new()
 {
     public BaseLookupWindow(
-        IKpzRepository<long, TLookupEntity>? repository,
-        IAppOptionRepository? appOptionRepository,
+        IBookstoreRepositoryFactory repositoryFactory,
         string title = "List of Records")
     {
-        Repository = repository;
-        _appOptionRepository = appOptionRepository;
+        _repositoryFactory = repositoryFactory;
+        _lookupRepository = repositoryFactory.GetBaseRepository<long, TLookupEntity>();
+        _appOptionRepository = repositoryFactory.GetAppOptionRepository();
+        _bookRepository = repositoryFactory.GetBookRepository();
         Title = title;
         Width = 600;
         Height = 800;
@@ -50,9 +54,11 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
         Closing += BaseLookupWindow_ClosingHandler;
     }
 
+    public long? LastCreatedRecordId { get; private set; }
+
     public bool SaveOptions()
     {
-        if (_appOptionRepository is null || _dataGrid is null)
+        if (_dataGrid is null)
             return false;
 
         var result = WindowOptionsPersistence.Save(_appOptionRepository, this, GetFullOptionName);
@@ -204,9 +210,31 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
 
     private void BaseLookupWindow_LoadedHandler(object sender, RoutedEventArgs e)
     {
+        LastCreatedRecordId = null;
         LoadData();
         ApplyDataGridOptionsFromDatabase();
         UpdateStatusBar();
+        FocusDataGrid();
+    }
+
+    private void FocusDataGrid()
+    {
+        if (_dataGrid is null)
+            return;
+
+        _dataGrid.Dispatcher.BeginInvoke(() =>
+        {
+            SelectFirstRecord();
+            _dataGrid.Focus();
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void SelectFirstRecord()
+    {
+        if (_items is null || _items.Count == 0)
+            return;
+
+        SelectRecord(_items[0]);
     }
 
     private void BaseLookupWindow_ClosingHandler(object? sender, CancelEventArgs e)
@@ -223,9 +251,6 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
 
     private bool ApplyWindowOptionsFromDatabase()
     {
-        if (_appOptionRepository is null)
-            return false;
-
         return WindowOptionsPersistence.TryApply(
             _appOptionRepository,
             this,
@@ -236,7 +261,7 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
 
     private bool ApplyDataGridOptionsFromDatabase()
     {
-        if (_appOptionRepository is null || _dataGrid is null)
+        if (_dataGrid is null)
             return false;
 
         return SfDataGridOptionsPersistence.TryLoad(
@@ -258,8 +283,13 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
                 name = dialog.Answer
             };
 
-            Repository?.Add(newRecord);
+            _lookupRepository?.Add(newRecord);
+            LastCreatedRecordId = newRecord.id > 0
+                ? newRecord.id
+                : _lookupRepository?.GetMaxId();
             LoadData();
+            if (LastCreatedRecordId is > 0)
+                SelectRecordById(LastCreatedRecordId.Value);
             UpdateStatusBar();
             AppUtils.ShowInfoMessage("Record added successfully.");
         }
@@ -281,9 +311,11 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
 
         if (dialog.ShowDialog() == true)
         {
+            var recordId = selected.id;
             selected.name = dialog.Answer;
-            Repository?.Update(selected);
+            _lookupRepository?.Update(selected);
             LoadData();
+            SelectRecordById(recordId);
             UpdateStatusBar();
             AppUtils.ShowInfoMessage("Record updated successfully.");
         }
@@ -298,19 +330,50 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
             return;
         }
 
-        var confirmResult = MessageBox.Show(
-            $"Delete record '{selected.name}'?",
-            "Confirm Delete",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+        var referenceKind = LookupBookReference.TryGetKind(typeof(TLookupEntity));
+        var referencingBookCount = 0;
+        if (referenceKind is LookupBookReferenceKind kind)
+            referencingBookCount = _bookRepository.CountBooksReferencingLookup(kind, selected.id);
 
-        if (confirmResult != MessageBoxResult.Yes)
+        if (ConfirmDelete(selected.name, referenceKind, referencingBookCount) == false)
             return;
 
-        Repository?.Delete(selected.id);
+        if (referencingBookCount > 0 && referenceKind is LookupBookReferenceKind referenceKindToClear)
+        {
+            _bookRepository.ClearBookLookupReferences(
+                referenceKindToClear,
+                selected.id,
+                AppConstants.UndefinedRecordId);
+        }
+
+        _lookupRepository?.Delete(selected.id);
         LoadData();
         UpdateStatusBar();
         AppUtils.ShowInfoMessage("Record deleted successfully.");
+    }
+
+    private static bool ConfirmDelete(
+        string? recordName,
+        LookupBookReferenceKind? referenceKind,
+        int referencingBookCount)
+    {
+        var displayName = string.IsNullOrWhiteSpace(recordName) ? "this record" : recordName.Trim();
+        string message;
+
+        if (referencingBookCount > 0 && referenceKind is LookupBookReferenceKind kind)
+        {
+            var lookupLabel = LookupBookReference.GetDisplayName(kind);
+            message =
+                $"Delete record '{displayName}'?{Environment.NewLine}{Environment.NewLine}" +
+                $"{referencingBookCount} book(s) reference this {lookupLabel}. " +
+                $"If you continue, the record will be deleted and those books will have their {lookupLabel} set to undefined.";
+        }
+        else
+        {
+            message = $"Delete record '{displayName}'?";
+        }
+
+        return AppUtils.ShowConfirmMessage(message);
     }
 
     private void RefreshDataButton_ClickHandler(object sender, RoutedEventArgs e)
@@ -323,27 +386,54 @@ public class BaseLookupWindow<TLookupEntity> : Window, IOptionsSavable where TLo
 
     private void LoadData()
     {
-        if (Repository is null || _dataGrid is null)
+        if (_lookupRepository is null || _dataGrid is null)
             return;
 
-        var records = Repository.GetAll().ToList();
+        var records = _lookupRepository.GetAll().ToList();
         _items = new ObservableCollection<TLookupEntity>(records);
         _dataGrid.ItemsSource = _items;
     }
 
-    private void UpdateStatusBar()
+    private void SelectRecordById(long recordId)
     {
-        if (Repository is null || _countText is null)
+        if (_dataGrid is null || _items is null || recordId <= 0)
             return;
 
-        _countText.Text = string.Format("Count {0}", Repository.Count());
+        var record = _items.FirstOrDefault(item => item.id == recordId);
+        if (record is not null)
+            SelectRecord(record);
+    }
+
+    private void SelectRecord(TLookupEntity record)
+    {
+        if (_dataGrid is null)
+            return;
+
+        _dataGrid.SelectedItem = record;
+
+        var rowIndex = _dataGrid.ResolveToRowIndex(record);
+        if (rowIndex < 0)
+            return;
+
+        var columnIndex = _dataGrid.ResolveToStartColumnIndex();
+        _dataGrid.ScrollInView(new RowColumnIndex(rowIndex, columnIndex));
+        _dataGrid.View?.MoveCurrentTo(record);
+    }
+
+    private void UpdateStatusBar()
+    {
+        if (_lookupRepository is null || _countText is null)
+            return;
+
+        _countText.Text = string.Format("Count {0}", _lookupRepository.Count());
     }
 
     private string GetFullOptionName(string optionName) => $"{_OptionsPrefix}.{typeof(TLookupEntity).Name}.{optionName}";
 
-    protected readonly IKpzRepository<long, TLookupEntity>? Repository;
-
-    private readonly IAppOptionRepository? _appOptionRepository;
+    private readonly IBookstoreRepositoryFactory _repositoryFactory;
+    private readonly IKpzRepository<long, TLookupEntity>? _lookupRepository;
+    private readonly IAppOptionRepository _appOptionRepository;
+    private readonly IBookRepository _bookRepository;
     private SfDataGrid? _dataGrid;
     private TextBlock? _countText;
     private ObservableCollection<TLookupEntity>? _items;

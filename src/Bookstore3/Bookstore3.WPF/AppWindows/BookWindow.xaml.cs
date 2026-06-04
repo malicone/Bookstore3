@@ -83,13 +83,30 @@ public partial class BookWindow : Window, IOptionsSavable
         try
         {
             var author = string.IsNullOrWhiteSpace(AuthorTextBox.Text) ? null : AuthorTextBox.Text.Trim();
-            var metadata = await metadataService.FetchMetadataAsync(
+            int? edition = EditionIntegerTextBox.Value is long editionValue
+                ? (int)editionValue
+                : null;
+            var results = await metadataService.FetchMetadataAsync(
                 TitleTextBox.Text.Trim(),
                 author,
+                edition,
                 CancellationToken.None);
 
-            ApplyFetchedMetadata(metadata);
-            await DownloadAndApplyCoverImageAsync(metadata.coverImageUrl);
+            if (results.Count == 0)
+            {
+                AppUtils.ShowInfoMessage($"No matching books were found from {providerName}.");
+                return;
+            }
+
+            var picker = new BookMetadataPickerDialog(results)
+            {
+                Owner = this
+            };
+            if (picker.ShowDialog() != true || picker.SelectedMetadata is not BookMetadataResult selectedMetadata)
+                return;
+
+            ApplyFetchedMetadata(selectedMetadata);
+            await DownloadAndApplyCoverImageAsync(selectedMetadata.coverImageUrl);
             AppUtils.ShowInfoMessage($"Book metadata fetched from {providerName}.");
         }
         catch (Exception ex)
@@ -171,11 +188,11 @@ public partial class BookWindow : Window, IOptionsSavable
 
     private void PopulateLookupComboBoxes()
     {
-        GroupComboBox.ItemsSource = _groupRepository.GetAll().ToList();
-        PublisherComboBox.ItemsSource = _publisherRepository.GetAll().ToList();
-        ShopComboBox.ItemsSource = _shopRepository.GetAll().ToList();
-        LanguageComboBox.ItemsSource = _languageRepository.GetAll().ToList();
-        CityComboBox.ItemsSource = _cityRepository.GetAll().ToList();
+        RefreshGroupComboBox();
+        RefreshPublisherComboBox();
+        RefreshShopComboBox();
+        RefreshLanguageComboBox();
+        RefreshCityComboBox();
     }
 
     private void InitLookupComboBoxesToUndefined()
@@ -282,6 +299,56 @@ public partial class BookWindow : Window, IOptionsSavable
         AnnotationTextBox.Text = book.annotation ?? string.Empty;
         DetailsTextBox.Text = book.details ?? string.Empty;
     }
+
+    private void ManageGroupsButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ManageLookup<group>(GroupComboBox, RefreshGroupComboBox, "Groups");
+
+    private void ManagePublishersButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ManageLookup<publisher>(PublisherComboBox, RefreshPublisherComboBox, "Publishers");
+
+    private void ManageShopsButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ManageLookup<shop>(ShopComboBox, RefreshShopComboBox, "Shops");
+
+    private void ManageLanguagesButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ManageLookup<language>(LanguageComboBox, RefreshLanguageComboBox, "Languages");
+
+    private void ManageCitiesButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ManageLookup<city>(CityComboBox, RefreshCityComboBox, "Cities");
+
+    private void ManageLookup<TLookup>(
+        Selector comboBox,
+        Action refreshComboBox,
+        string windowTitle) where TLookup : lookup_entity, new()
+    {
+        var previousSelection = comboBox.SelectedValue;
+        var lookupWindow = new BaseLookupWindow<TLookup>(_repositoryFactory, windowTitle)
+        {
+            Owner = this
+        };
+        lookupWindow.ShowDialog();
+
+        refreshComboBox();
+
+        if (lookupWindow.LastCreatedRecordId is long newRecordId and > 0)
+            comboBox.SelectedValue = newRecordId;
+        else if (previousSelection is not null)
+            comboBox.SelectedValue = previousSelection;
+    }
+
+    private void RefreshGroupComboBox() =>
+        GroupComboBox.ItemsSource = _groupRepository.GetAll().ToList();
+
+    private void RefreshPublisherComboBox() =>
+        PublisherComboBox.ItemsSource = _publisherRepository.GetAll().ToList();
+
+    private void RefreshShopComboBox() =>
+        ShopComboBox.ItemsSource = _shopRepository.GetAll().ToList();
+
+    private void RefreshLanguageComboBox() =>
+        LanguageComboBox.ItemsSource = _languageRepository.GetAll().ToList();
+
+    private void RefreshCityComboBox() =>
+        CityComboBox.ItemsSource = _cityRepository.GetAll().ToList();
 
     private void ChooseBookFileButton_ClickHandler(object sender, RoutedEventArgs e)
     {

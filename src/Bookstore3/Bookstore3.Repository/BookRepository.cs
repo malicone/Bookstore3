@@ -70,6 +70,29 @@ public class BookRepository : KpzRepository<long, book>, IBookRepository
         return await Connection!.QueryAsync<book_ex>(sql, new { Pattern = pattern });
     }
 
+    public virtual int CountBooksReferencingLookup(LookupBookReferenceKind referenceKind, long lookupId)
+    {
+        if (lookupId <= 0 || OpenConnection() == false)
+            return 0;
+
+        var column = LookupBookReference.GetColumnName(referenceKind);
+        var sql = $"SELECT COUNT(*) FROM books WHERE {column} = @LookupId";
+        return Connection!.ExecuteScalar<int>(sql, new { LookupId = lookupId });
+    }
+
+    public virtual int ClearBookLookupReferences(
+        LookupBookReferenceKind referenceKind,
+        long lookupId,
+        long undefinedRecordId)
+    {
+        if (lookupId <= 0 || OpenConnection() == false)
+            return 0;
+
+        var column = LookupBookReference.GetColumnName(referenceKind);
+        var sql = $"UPDATE books SET {column} = @UndefinedRecordId WHERE {column} = @LookupId";
+        return Connection!.Execute(sql, new { LookupId = lookupId, UndefinedRecordId = undefinedRecordId });
+    }
+
     private static string BuildSearchPattern(string searchText) => $"%{searchText.Trim()}%";
 
     private string BuiltSelectAllBooksLightweightQuery() => BuiltSelectBooksLightweightBaseQuery() + "ORDER BY b.id";

@@ -36,4 +36,8 @@ public interface IBookRepository : IKpzRepository<long, book>
     /// <param name="searchText">The text to search for.</param>
     /// <returns>List of lightweight book objects that match the search criteria.</returns>
     Task<IEnumerable<book_ex>> SearchBooksLightweightAsync(string searchText);
+
+    int CountBooksReferencingLookup(LookupBookReferenceKind referenceKind, long lookupId);
+
+    int ClearBookLookupReferences(LookupBookReferenceKind referenceKind, long lookupId, long undefinedRecordId);
 }

@@ -1,0 +1,48 @@
+<Window x:Class="Bookstore3.WPF.AppWindows.BookMetadataPickerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Select Book"
+        Height="420"
+        Width="720"
+        MinHeight="300"
+        MinWidth="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Loaded="Window_LoadedHandler">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Margin="0,0,0,10"
+                   Text="Select the most relevant book from the search results:"
+                   TextWrapping="Wrap" />
+
+        <ListView x:Name="ResultsListView"
+                  Grid.Row="1"
+                  DisplayMemberPath="DisplayText"
+                  MouseDoubleClick="ResultsListView_MouseDoubleClickHandler" />
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,12,0,0">
+            <Button x:Name="OkButton"
+                    Width="90"
+                    Margin="0,0,8,0"
+                    IsDefault="True"
+                    Content="OK"
+                    Click="OkButton_ClickHandler" />
+            <Button Width="90"
+                    IsCancel="True"
+                    Content="Cancel" />
+        </StackPanel>
+    </Grid>
+</Window>

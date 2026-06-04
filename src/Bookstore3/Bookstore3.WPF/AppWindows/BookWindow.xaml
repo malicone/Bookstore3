@@ -114,7 +114,15 @@
                 BorderThickness="0,0,0,1"
                 Padding="4,6"
                 Margin="0,0,0,8">
-            <ToolBar Background="Transparent">
+            <StackPanel>
+                <TextBlock Text="Enter Title (Author and Edition are optional) to fetch book's data from the Web"
+                           Margin="4,0,4,6"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap" />
+                <ToolBar Background="Transparent">
                 <Button x:Name="FetchFromOpenAiButton"
                         Style="{StaticResource ToolbarButtonStyle}"
                         ToolTip="Fetch book metadata from Open AI"
@@ -138,6 +146,7 @@
                     </StackPanel>
                 </Button>
             </ToolBar>
+            </StackPanel>
         </Border>
 
         <Border DockPanel.Dock="Bottom"
@@ -280,12 +289,25 @@
                              Style="{StaticResource MainDataTextBoxStyle}" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Group" Style="{StaticResource MainDataLabelStyle}" />
-                    <syncfusion:ComboBoxAdv Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
-                                            x:Name="GroupComboBox"
-                                            DisplayMemberPath="name"
-                                            SelectedValuePath="id"
-                                            IsEditable="False"                                            
-                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <syncfusion:ComboBoxAdv Grid.Column="0"
+                                                x:Name="GroupComboBox"
+                                                DisplayMemberPath="name"
+                                                SelectedValuePath="id"
+                                                IsEditable="False"
+                                                Style="{StaticResource MainDataComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ManageGroupsButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                ToolTip="Manage groups"
+                                Click="ManageGroupsButton_ClickHandler">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="ISBN" Style="{StaticResource MainDataLabelStyle}" />
                     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
@@ -302,19 +324,45 @@
                                                Style="{StaticResource MainDataIntegerTextBoxStyle}" />
 
                     <TextBlock Grid.Row="5" Grid.Column="0" Text="Publisher" Style="{StaticResource MainDataLabelStyle}" />
-                    <syncfusion:ComboBoxAdv Grid.Row="5" Grid.Column="1"
-                                            x:Name="PublisherComboBox"
-                                            DisplayMemberPath="name"
-                                            SelectedValuePath="id"
-                                            IsEditable="False"
-                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <Grid Grid.Row="5" Grid.Column="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <syncfusion:ComboBoxAdv Grid.Column="0"
+                                                x:Name="PublisherComboBox"
+                                                DisplayMemberPath="name"
+                                                SelectedValuePath="id"
+                                                IsEditable="False"
+                                                Style="{StaticResource MainDataComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ManagePublishersButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                ToolTip="Manage publishers"
+                                Click="ManagePublishersButton_ClickHandler">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
                     <TextBlock Grid.Row="5" Grid.Column="2" Text="Shop" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
-                    <syncfusion:ComboBoxAdv Grid.Row="5" Grid.Column="3"
-                                            x:Name="ShopComboBox"
-                                            DisplayMemberPath="name"
-                                            SelectedValuePath="id"
-                                            IsEditable="False"
-                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <Grid Grid.Row="5" Grid.Column="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <syncfusion:ComboBoxAdv Grid.Column="0"
+                                                x:Name="ShopComboBox"
+                                                DisplayMemberPath="name"
+                                                SelectedValuePath="id"
+                                                IsEditable="False"
+                                                Style="{StaticResource MainDataComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ManageShopsButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                ToolTip="Manage shops"
+                                Click="ManageShopsButton_ClickHandler">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
 
                     <TextBlock Grid.Row="6" Grid.Column="0" Text="Format" Style="{StaticResource MainDataLabelStyle}" />
                     <TextBox Grid.Row="6" Grid.Column="1"
@@ -344,24 +392,50 @@
                               x:Name="HardcoverCheckBox"
                               Style="{StaticResource MainDataCheckBoxStyle}" />
                     <TextBlock Grid.Row="8" Grid.Column="2" Text="Language" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
-                    <syncfusion:ComboBoxAdv Grid.Row="8" Grid.Column="3"
-                                            x:Name="LanguageComboBox"
-                                            DisplayMemberPath="name"
-                                            SelectedValuePath="id"
-                                            IsEditable="False"
-                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <Grid Grid.Row="8" Grid.Column="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <syncfusion:ComboBoxAdv Grid.Column="0"
+                                                x:Name="LanguageComboBox"
+                                                DisplayMemberPath="name"
+                                                SelectedValuePath="id"
+                                                IsEditable="False"
+                                                Style="{StaticResource MainDataComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ManageLanguagesButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                ToolTip="Manage languages"
+                                Click="ManageLanguagesButton_ClickHandler">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
 
                     <TextBlock Grid.Row="9" Grid.Column="0" Text="Digital Copy" Style="{StaticResource MainDataLabelStyle}" />
                     <CheckBox Grid.Row="9" Grid.Column="1"
                               x:Name="DigitalCopyCheckBox"
                               Style="{StaticResource MainDataCheckBoxStyle}" />
                     <TextBlock Grid.Row="9" Grid.Column="2" Text="City" Style="{StaticResource MainDataLabelStyle}" Margin="16,0,8,0" />
-                    <syncfusion:ComboBoxAdv Grid.Row="9" Grid.Column="3"
-                                            x:Name="CityComboBox"
-                                            DisplayMemberPath="name"
-                                            SelectedValuePath="id"
-                                            IsEditable="False"
-                                            Style="{StaticResource MainDataComboBoxStyle}" />
+                    <Grid Grid.Row="9" Grid.Column="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <syncfusion:ComboBoxAdv Grid.Column="0"
+                                                x:Name="CityComboBox"
+                                                DisplayMemberPath="name"
+                                                SelectedValuePath="id"
+                                                IsEditable="False"
+                                                Style="{StaticResource MainDataComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                x:Name="ManageCitiesButton"
+                                Style="{StaticResource BookFileButtonStyle}"
+                                ToolTip="Manage cities"
+                                Click="ManageCitiesButton_ClickHandler">
+                            <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" />
+                        </Button>
+                    </Grid>
 
                     <TextBlock Grid.Row="10" Grid.Column="0" Text="Book File" Style="{StaticResource MainDataLabelStyle}" />
                     <Grid Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="3">
@@ -384,7 +458,7 @@
             </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="Annotation">
+        <TabItem Header="Summary">
             <TextBox x:Name="AnnotationTextBox"
                      Style="{StaticResource MultilineTextBoxStyle}" />
         </TabItem>

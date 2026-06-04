@@ -251,19 +251,19 @@ public partial class MainWindow : Window, IOptionsSavable
     }
 
     private void GroupsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
-        ShowLookupWindow(_groupRepository, "Groups");
+        ShowLookupWindow<group>("Groups");
 
     private void PublishersMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
-        ShowLookupWindow(_publisherRepository, "Publishers");
+        ShowLookupWindow<publisher>("Publishers");
 
     private void ShopsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
-        ShowLookupWindow(_shopRepository, "Shops");
+        ShowLookupWindow<shop>("Shops");
 
     private void LanguagesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
-        ShowLookupWindow(_languageRepository, "Languages");
+        ShowLookupWindow<language>("Languages");
 
     private void CitiesMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
-        ShowLookupWindow(_cityRepository, "Cities");
+        ShowLookupWindow<city>("Cities");
 
     private void ExportButton_ClickHandler(object sender, RoutedEventArgs e)
     {
@@ -396,15 +396,15 @@ public partial class MainWindow : Window, IOptionsSavable
         document.Close(true);
     }
 
-    private void ShowLookupWindow<TEntity>(IKpzRepository<long, TEntity>? repository, string title)
+    private void ShowLookupWindow<TEntity>(string title)
         where TEntity : lookup_entity, new()
     {
-        if (repository is null)
+        if (_repositoryFactory is null)
             return;
 
         var selectedBookId = GetSelectedBookId();
 
-        var lookupWindow = new BaseLookupWindow<TEntity>(repository, _appOptionRepository, title)
+        var lookupWindow = new BaseLookupWindow<TEntity>(_repositoryFactory, title)
         {
             Owner = this
         };

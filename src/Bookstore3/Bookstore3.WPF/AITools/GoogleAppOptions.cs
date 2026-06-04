@@ -7,7 +7,7 @@ internal static class GoogleAppOptionKeys
 {
     public const string ApiKey = "Options.Google.ApiKey";
     public const string Model = "Options.Google.Model";
-    public const string DefaultModel = "gemini-2.5-flash";
+    public const string DefaultModel = "gemini-3.5-flash";
 }
 
 internal sealed class GoogleAppOptions

@@ -16,19 +16,23 @@ internal static class BookMetadataJsonParser
         }
     };
 
-    public static BookMetadataResult Parse(string content)
+    public static IReadOnlyList<BookMetadataResult> ParseList(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
             throw new InvalidOperationException("AI returned empty content.");
 
-        var json = ExtractJsonObject(content);
+        var json = ExtractJsonPayload(content);
         try
         {
-            var metadata = JsonSerializer.Deserialize<BookMetadataResult>(json, JsonOptions);
-            if (metadata is null)
+            var books = TryDeserializeBooksArray(json);
+            if (books is null)
                 throw new InvalidOperationException("AI response is not valid JSON metadata.");
 
-            return metadata;
+            return books
+                .Where(book => string.IsNullOrWhiteSpace(book.title) == false ||
+                               string.IsNullOrWhiteSpace(book.author) == false ||
+                               string.IsNullOrWhiteSpace(book.isbn) == false)
+                .ToList();
         }
         catch (JsonException ex)
         {
@@ -37,7 +41,16 @@ internal static class BookMetadataJsonParser
         }
     }
 
-    private static string ExtractJsonObject(string content)
+    private static List<BookMetadataResult>? TryDeserializeBooksArray(string json)
+    {
+        if (json.StartsWith("[", StringComparison.Ordinal))
+            return JsonSerializer.Deserialize<List<BookMetadataResult>>(json, JsonOptions);
+
+        var wrapper = JsonSerializer.Deserialize<BookMetadataListResponse>(json, JsonOptions);
+        return wrapper?.books;
+    }
+
+    private static string ExtractJsonPayload(string content)
     {
         content = content.Trim();
         if (content.StartsWith("```", StringComparison.Ordinal))
@@ -52,11 +65,22 @@ internal static class BookMetadataJsonParser
         }
 
         content = content.Trim();
-        var firstBrace = content.IndexOf('{');
-        var lastBrace = content.LastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace)
-            content = content[firstBrace..(lastBrace + 1)];
+        var firstArray = content.IndexOf('[');
+        var firstObject = content.IndexOf('{');
+        if (firstArray >= 0 && (firstObject < 0 || firstArray < firstObject))
+        {
+            var lastArray = content.LastIndexOf(']');
+            if (lastArray > firstArray)
+                return content[firstArray..(lastArray + 1)].Trim();
+        }
 
-        return content.Trim();
+        if (firstObject >= 0)
+        {
+            var lastObject = content.LastIndexOf('}');
+            if (lastObject > firstObject)
+                return content[firstObject..(lastObject + 1)].Trim();
+        }
+
+        return content;
     }
 }

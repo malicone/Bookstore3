@@ -14,9 +14,10 @@ internal sealed class OpenAiBookMetadataService : IAiBookMetadataService
         _stringCipher = stringCipher;
     }
 
-    public async Task<BookMetadataResult> FetchMetadataAsync(
+    public async Task<IReadOnlyList<BookMetadataResult>> FetchMetadataAsync(
         string title,
         string? author,
+        int? edition,
         CancellationToken cancellationToken)
     {
         var options = OpenAiAppOptions.Load(_appOptionRepository, _stringCipher);
@@ -36,7 +37,7 @@ internal sealed class OpenAiBookMetadataService : IAiBookMetadataService
             messages = new object[]
             {
                 new { role = "system", content = BookMetadataPrompt.SystemInstruction },
-                new { role = "user", content = BookMetadataPrompt.BuildUserPrompt(title, author) }
+                new { role = "user", content = BookMetadataPrompt.BuildUserPrompt(title, author, edition) }
             }
         });
 
@@ -48,12 +49,12 @@ internal sealed class OpenAiBookMetadataService : IAiBookMetadataService
         var completion = System.Text.Json.JsonSerializer.Deserialize<ChatCompletionResponse>(body, BookMetadataJsonParserJsonOptions)
                          ?? throw new InvalidOperationException("OpenAI returned an invalid response.");
         var content = completion.choices?.FirstOrDefault()?.message?.content;
-        return BookMetadataJsonParser.Parse(content ?? string.Empty);
+        return BookMetadataJsonParser.ParseList(content ?? string.Empty);
     }
 
     private readonly IAppOptionRepository _appOptionRepository;
     private readonly IStringCipher _stringCipher;
-    private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(60) };
 
     private static readonly System.Text.Json.JsonSerializerOptions BookMetadataJsonParserJsonOptions = new()
     {
