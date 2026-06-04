@@ -132,18 +132,6 @@
 
                     <Separator />
 
-                    <Button x:Name="OptionsButton"
-                            Style="{StaticResource ToolbarButtonStyle}"
-                            ToolTip="Options"
-                            Click="OptionsButton_ClickHandler">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="Cog" Style="{StaticResource ToolbarIconStyle}" />
-                            <TextBlock Text="Options" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <Separator />
-
                     <Menu VerticalAlignment="Center" Background="Transparent">
                         <MenuItem x:Name="GroupsToolbarMenuItem"
                                   Padding="12,6"
@@ -169,6 +157,19 @@
                             <MenuItem x:Name="CitiesMenuItem" Header="Cities" Click="CitiesMenuItem_ClickHandler" />
                         </MenuItem>
                     </Menu>
+                    
+                    <Separator />
+
+                    <Button x:Name="OptionsButton"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Options"
+                            Click="OptionsButton_ClickHandler">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Cog" Style="{StaticResource ToolbarIconStyle}" />
+                            <TextBlock Text="Options" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
                 </ToolBar>
             </DockPanel>
         </Border>

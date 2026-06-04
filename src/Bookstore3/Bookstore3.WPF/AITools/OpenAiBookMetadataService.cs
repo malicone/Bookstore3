@@ -49,7 +49,7 @@ internal sealed class OpenAiBookMetadataService : IAiBookMetadataService
         var completion = System.Text.Json.JsonSerializer.Deserialize<ChatCompletionResponse>(body, BookMetadataJsonParserJsonOptions)
                          ?? throw new InvalidOperationException("OpenAI returned an invalid response.");
         var content = completion.choices?.FirstOrDefault()?.message?.content;
-        return BookMetadataJsonParser.ParseList(content ?? string.Empty);
+        return BookMetadataJsonParser.ParseList(content ?? string.Empty, "OpenAI");
     }
 
     private readonly IAppOptionRepository _appOptionRepository;

@@ -16,8 +16,16 @@ internal static class BookMetadataPrompt
         "For summaries, use only publicly available summary text; paraphrase briefly if needed to avoid copying protected text verbatim.";
 
     public const string JsonFromResearchSystemInstruction =
-        "You are a strict JSON API. Convert the supplied research notes into a single JSON object. " +
-        "If a value is unknown set null. Do not invent fields or values not supported by the notes.";
+        "You are a strict JSON API. Convert the supplied research notes into a single JSON object with a books array. " +
+        "Include every distinct book described in the notes. If a value is unknown set null. " +
+        "When the search criteria title or author match a book in the notes, always include that book with at least title and author filled in.";
+
+    private const string BooksCountRequirement =
+        "Find at least 3 books and up to 10 books (maximum limit 10). " +
+        "Include every distinct relevant match in that range; do not stop after the first book. ";
+
+    private const string SearchEfficiencyRequirement =
+        "Use the fewest web searches needed (prefer one broad search query, at most 3 searches). ";
 
     public static string BuildUserPrompt(string title, string? author, int? edition)
     {
@@ -25,11 +33,15 @@ internal static class BookMetadataPrompt
 
         return
             "Go to the web and search for books matching the criteria below. " +
-            "Find the most relevant matches (up to 10). " +
+            SearchEfficiencyRequirement +
+            BooksCountRequirement +
             "Return one JSON object with a single property \"books\" whose value is an array of book objects " +
             "ordered from most relevant to least relevant. " +
             "Each book object must contain only these nullable fields: " +
             MetadataFieldList + " " +
+            FormatFieldExplanation +
+            HardcoverFieldExplanation +
+            CoverImageUrlFieldExplanation +
             "The annotation field is the book summary (annotation is a synonym of summary). " +
             "For annotation, search and use only publicly available summary text about the book from the web " +
             "(for example library catalogs, Open Library, ISBN databases, publisher pages, or bookstore listings). " +
@@ -44,10 +56,15 @@ internal static class BookMetadataPrompt
     {
         return
             "Search the web for books matching the criteria below. " +
-            "Find the most relevant matches (up to 10) and write plain-text research notes for each match, " +
+            SearchEfficiencyRequirement +
+            BooksCountRequirement +
+            "Write plain-text research notes for each match, " +
             "ordered from most relevant to least relevant. " +
             "For each book include whatever you can verify from public sources: " +
             MetadataFieldList + " " +
+            FormatFieldExplanation +
+            HardcoverFieldExplanation +
+            CoverImageUrlFieldExplanation +
             "The annotation field is the book summary. Use only publicly available summary text; paraphrase briefly if needed. " +
             "If no matches are found, say that no matches were found. " +
             "Do not return JSON. " +
@@ -59,18 +76,40 @@ internal static class BookMetadataPrompt
         return
             "Convert the research notes below into one JSON object with a single property \"books\" " +
             "whose value is an array of book objects ordered from most relevant to least relevant. " +
+            BooksCountRequirement +
             "Each book object must contain only these nullable fields: " +
             MetadataFieldList + " " +
+            FormatFieldExplanation +
+            HardcoverFieldExplanation +
+            CoverImageUrlFieldExplanation +
             "publishYear must be integer year if known. URLs must be absolute https URLs. " +
-            "If the notes contain no matches return {\"books\":[]}. " +
+            "Only return {\"books\":[]} when the notes explicitly state that no books were found. " +
             BuildSearchCriteria(title, author, edition) +
             "\n\nResearch notes:\n" +
             researchNotes.Trim();
     }
 
+    private const string FormatFieldExplanation =
+        "The format field is the same as Dimensions: physical book size, not binding type " +
+        "(for example 70x100/16, or height and width in cm or inches such as 23 x 15 cm). Do not use Paperback or Hardcover for format. ";
+
+    private const string HardcoverFieldExplanation =
+        "The wrapper field is the Hardcover book parameter (boolean). " +
+        "Set wrapper to true if Hardcover is mentioned in the found book description. " +
+        "Set wrapper to false if Paperback is mentioned in the book description. " +
+        "Set wrapper to null if neither binding is stated or binding is unknown. ";
+
+    private const string CoverImageUrlFieldExplanation =
+        "The coverImageUrl field must be a direct https URL to the book cover image file (jpg, png, or webp), " +
+        "not a bookstore or catalog page URL. " +
+        "Search for cover art on Open Library, publisher pages, ISBN databases, and bookstore listings. " +
+        "When an ISBN is known, use an Open Library cover URL such as https://covers.openlibrary.org/b/isbn/{ISBN}-L.jpg " +
+        "(ISBN digits only, no hyphens). " +
+        "Do not leave coverImageUrl null when a public cover image URL exists for that book. ";
+
     private const string MetadataFieldList =
         "title, author, isbn, pageCount, edition, format, publishYear, price, group, language, publisher, city, " +
-        "annotation, coverImageUrl.";
+        "wrapper, annotation, coverImageUrl.";
 
     private static string BuildSearchCriteria(string title, string? author, int? edition)
     {

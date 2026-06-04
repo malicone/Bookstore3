@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Bookstore3.WPF.AITools;
 
@@ -16,8 +17,18 @@ public sealed class BookMetadataResult
     public string? language { get; set; }
     public string? publisher { get; set; }
     public string? city { get; set; }
+    public bool? wrapper { get; set; }
     public string? annotation { get; set; }
     public string? coverImageUrl { get; set; }
+
+    [JsonPropertyName("cover_url")]
+    public string? cover_url { set { if (string.IsNullOrWhiteSpace(coverImageUrl)) coverImageUrl = value; } }
+
+    [JsonPropertyName("cover_image_url")]
+    public string? cover_image_url { set { if (string.IsNullOrWhiteSpace(coverImageUrl)) coverImageUrl = value; } }
+
+    [JsonPropertyName("imageUrl")]
+    public string? imageUrl { set { if (string.IsNullOrWhiteSpace(coverImageUrl)) coverImageUrl = value; } }
 
     public string DisplayText
     {

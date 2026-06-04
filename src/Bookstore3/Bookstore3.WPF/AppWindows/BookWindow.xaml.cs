@@ -86,14 +86,21 @@ public partial class BookWindow : Window, IOptionsSavable
             int? edition = EditionIntegerTextBox.Value is long editionValue
                 ? (int)editionValue
                 : null;
+            GoogleAiDebugLog.Write($"[BookWindow] Fetch from {providerName} started — title=\"{TitleTextBox.Text.Trim()}\"");
+            var fetchTimeout = metadataService is GoogleAiBookMetadataService
+                ? TimeSpan.FromMinutes(20)
+                : TimeSpan.FromMinutes(5);
+            using var fetchCts = new CancellationTokenSource(fetchTimeout);
             var results = await metadataService.FetchMetadataAsync(
                 TitleTextBox.Text.Trim(),
                 author,
                 edition,
-                CancellationToken.None);
+                fetchCts.Token);
 
+            GoogleAiDebugLog.Write($"[BookWindow] Fetch from {providerName} returned {results.Count} book(s).");
             if (results.Count == 0)
             {
+                GoogleAiDebugLog.Write($"[BookWindow] Showing 'no matching books' for {providerName} (no exception thrown).");
                 AppUtils.ShowInfoMessage($"No matching books were found from {providerName}.");
                 return;
             }
@@ -107,11 +114,15 @@ public partial class BookWindow : Window, IOptionsSavable
 
             ApplyFetchedMetadata(selectedMetadata);
             await DownloadAndApplyCoverImageAsync(selectedMetadata.coverImageUrl);
-            AppUtils.ShowInfoMessage($"Book metadata fetched from {providerName}.");
+            //AppUtils.ShowInfoMessage($"Book metadata fetched from {providerName}.");
         }
         catch (Exception ex)
         {
-            AppUtils.ShowErrorMessage($"Failed to fetch metadata: {ex.Message}");
+            GoogleAiDebugLog.WriteException($"[BookWindow] Fetch from {providerName}", ex);
+            var errorText = metadataService is GoogleAiBookMetadataService
+                ? GoogleGeminiApiHelper.FormatExceptionForDialog(ex)
+                : ex.Message;
+            AppUtils.ShowErrorMessage($"Failed to fetch metadata from {providerName}:{Environment.NewLine}{Environment.NewLine}{errorText}");
         }
         finally
         {
@@ -216,6 +227,8 @@ public partial class BookWindow : Window, IOptionsSavable
             ? new DateTime(metadata.publishYear.Value, 1, 1)
             : null;
         PriceDoubleTextBox.Value = metadata.price;
+        if (metadata.wrapper.HasValue)
+            HardcoverCheckBox.IsChecked = metadata.wrapper.Value;
         AnnotationTextBox.Text = metadata.annotation ?? string.Empty;
 
         TrySelectLookupByName(GroupComboBox, metadata.@group);

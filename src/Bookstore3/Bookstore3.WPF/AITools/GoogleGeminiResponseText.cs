@@ -11,7 +11,9 @@ internal static class GoogleGeminiResponseText
         if (string.IsNullOrWhiteSpace(text) == false)
             return text;
 
-        throw new InvalidOperationException(BuildEmptyContentMessage(response, contextLabel));
+        var message = BuildEmptyContentMessage(response, contextLabel);
+        GoogleAiDebugLog.Write($"GetTextOrThrow failed ({contextLabel}): {message}");
+        throw new InvalidOperationException(message);
     }
 
     public static string? TryGetText(GenerateContentResponse? response)
@@ -22,11 +24,11 @@ internal static class GoogleGeminiResponseText
         if (string.IsNullOrWhiteSpace(response.Text) == false)
             return response.Text;
 
-        var fromParts = ExtractFromCandidateParts(response, includeThoughtParts: false);
+        var fromParts = CollectTextFromCandidates(response, includeThoughtParts: false);
         if (string.IsNullOrWhiteSpace(fromParts) == false)
             return fromParts;
 
-        fromParts = ExtractFromCandidateParts(response, includeThoughtParts: true);
+        fromParts = CollectTextFromCandidates(response, includeThoughtParts: true);
         if (string.IsNullOrWhiteSpace(fromParts) == false)
             return fromParts;
 
@@ -36,7 +38,7 @@ internal static class GoogleGeminiResponseText
         return null;
     }
 
-    private static string? ExtractFromCandidateParts(GenerateContentResponse response, bool includeThoughtParts)
+    private static string? CollectTextFromCandidates(GenerateContentResponse response, bool includeThoughtParts)
     {
         var candidates = response.Candidates;
         if (candidates is null || candidates.Count == 0)
@@ -54,17 +56,22 @@ internal static class GoogleGeminiResponseText
                 if (includeThoughtParts == false && part.Thought == true)
                     continue;
 
-                if (string.IsNullOrWhiteSpace(part.Text))
-                    continue;
-
-                if (sb.Length > 0)
-                    sb.AppendLine();
-
-                sb.Append(part.Text);
+                AppendPartText(sb, part);
             }
         }
 
         return sb.Length > 0 ? sb.ToString() : null;
+    }
+
+    private static void AppendPartText(StringBuilder sb, Part part)
+    {
+        if (string.IsNullOrWhiteSpace(part.Text))
+            return;
+
+        if (sb.Length > 0)
+            sb.AppendLine();
+
+        sb.Append(part.Text);
     }
 
     private static string BuildEmptyContentMessage(GenerateContentResponse? response, string contextLabel)

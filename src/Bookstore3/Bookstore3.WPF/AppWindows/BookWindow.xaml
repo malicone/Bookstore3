@@ -59,6 +59,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <Style x:Key="MainDataIntegerTextBoxStyle" TargetType="syncfusion:IntegerTextBox">
+            <Setter Property="UseNullOption" Value="True" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,2" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />

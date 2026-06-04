@@ -8,6 +8,12 @@ internal static class GoogleAppOptionKeys
     public const string ApiKey = "Options.Google.ApiKey";
     public const string Model = "Options.Google.Model";
     public const string DefaultModel = "gemini-3.5-flash";
+
+    /// <summary>
+    /// Model used for <c>google_search</c> grounding. Gemini 2.5 Flash completes grounded requests
+    /// reliably; Gemini 3.x often exceeds client timeouts on multi-book search prompts.
+    /// </summary>
+    public const string SearchModel = "gemini-2.5-flash";
 }
 
 internal sealed class GoogleAppOptions

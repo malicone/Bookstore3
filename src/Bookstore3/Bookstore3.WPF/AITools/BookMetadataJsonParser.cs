@@ -16,26 +16,41 @@ internal static class BookMetadataJsonParser
         }
     };
 
-    public static IReadOnlyList<BookMetadataResult> ParseList(string content)
+    public static IReadOnlyList<BookMetadataResult> ParseList(string content, string? debugContext = null)
     {
+        var contextPrefix = string.IsNullOrWhiteSpace(debugContext) ? "ParseList" : $"ParseList ({debugContext})";
+
         if (string.IsNullOrWhiteSpace(content))
             throw new InvalidOperationException("AI returned empty content.");
 
         var json = ExtractJsonPayload(content);
+        GoogleAiDebugLog.Write($"{contextPrefix}: extracted JSON length={json.Length}");
+        GoogleAiDebugLog.WriteResponseSnippet($"{contextPrefix} JSON", json, maxLength: 600);
+
         try
         {
             var books = TryDeserializeBooksArray(json);
             if (books is null)
                 throw new InvalidOperationException("AI response is not valid JSON metadata.");
 
-            return books
-                .Where(book => string.IsNullOrWhiteSpace(book.title) == false ||
-                               string.IsNullOrWhiteSpace(book.author) == false ||
-                               string.IsNullOrWhiteSpace(book.isbn) == false)
-                .ToList();
+            GoogleAiDebugLog.Write($"{contextPrefix}: deserialized raw book count={books.Count}");
+
+            var filtered = books.Where(HasIdentifyingMetadata).ToList();
+            GoogleAiDebugLog.Write($"{contextPrefix}: after filter count={filtered.Count}");
+
+            if (filtered.Count == 0 && books.Count > 0)
+            {
+                GoogleAiDebugLog.Write($"{contextPrefix}: filter removed all books, returning unfiltered list.");
+                BookMetadataCoverEnricher.EnrichCoverImageUrls(books);
+                return books;
+            }
+
+            BookMetadataCoverEnricher.EnrichCoverImageUrls(filtered);
+            return filtered;
         }
         catch (JsonException ex)
         {
+            GoogleAiDebugLog.WriteException(contextPrefix, ex);
             throw new InvalidOperationException(
                 $"AI metadata JSON is invalid or uses unsupported field types: {ex.Message}", ex);
         }
@@ -65,6 +80,15 @@ internal static class BookMetadataJsonParser
         }
 
         content = content.Trim();
+
+        var booksObjectStart = FindBooksWrapperStart(content);
+        if (booksObjectStart >= 0)
+        {
+            var lastObject = content.LastIndexOf('}');
+            if (lastObject > booksObjectStart)
+                return content[booksObjectStart..(lastObject + 1)].Trim();
+        }
+
         var firstArray = content.IndexOf('[');
         var firstObject = content.IndexOf('{');
         if (firstArray >= 0 && (firstObject < 0 || firstArray < firstObject))
@@ -83,4 +107,27 @@ internal static class BookMetadataJsonParser
 
         return content;
     }
+
+    private static int FindBooksWrapperStart(string content)
+    {
+        const StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+        var markers = new[] { "{\"books\"", "{ \"books\"", "{\n\"books\"", "{\r\n\"books\"" };
+        var start = -1;
+        foreach (var marker in markers)
+        {
+            var index = content.IndexOf(marker, comparison);
+            if (index >= 0 && (start < 0 || index < start))
+                start = index;
+        }
+
+        return start;
+    }
+
+    private static bool HasIdentifyingMetadata(BookMetadataResult book) =>
+        string.IsNullOrWhiteSpace(book.title) == false ||
+        string.IsNullOrWhiteSpace(book.author) == false ||
+        string.IsNullOrWhiteSpace(book.isbn) == false ||
+        string.IsNullOrWhiteSpace(book.publisher) == false ||
+        book.publishYear.HasValue ||
+        string.IsNullOrWhiteSpace(book.coverImageUrl) == false;
 }
