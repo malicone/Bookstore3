@@ -3,16 +3,92 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Bookstore3.WPF.AppWindows"
         mc:Ignorable="d"
         Title="Select Book"
-        Height="420"
-        Width="720"
-        MinHeight="300"
-        MinWidth="500"
+        Height="520"
+        Width="820"
+        MinHeight="360"
+        MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
-        Loaded="Window_LoadedHandler">
+        Loaded="Window_LoadedHandler"
+        Closing="Window_ClosingHandler">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <Style x:Key="DialogButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="90" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Padding" Value="12,4" />
+        </Style>
+
+        <Style x:Key="ResultsListViewItemStyle" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <DataTemplate x:Key="BookMetadataPickerItemTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Width="{x:Static local:BookMetadataPickerItem.CoverWidth}"
+                        Height="{x:Static local:BookMetadataPickerItem.CoverHeight}"
+                        Margin="0,0,10,0"
+                        Background="#F3F3F3"
+                        BorderBrush="#D0D0D0"
+                        BorderThickness="1">
+                    <Grid>
+                        <Image Source="{Binding CoverImage}"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding HasCoverImage, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock Text="No cover"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="#888888"
+                                   TextWrapping="Wrap"
+                                   Margin="4">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasCoverImage}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DisplayText}"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ExtendedDescription}"
+                               Margin="0,6,0,0"
+                               FontSize="12"
+                               Foreground="#444444"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -27,7 +103,10 @@
 
         <ListView x:Name="ResultsListView"
                   Grid.Row="1"
-                  DisplayMemberPath="DisplayText"
+                  ItemTemplate="{StaticResource BookMetadataPickerItemTemplate}"
+                  ItemContainerStyle="{StaticResource ResultsListViewItemStyle}"
+                  HorizontalContentAlignment="Stretch"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   MouseDoubleClick="ResultsListView_MouseDoubleClickHandler" />
 
         <StackPanel Grid.Row="2"
@@ -35,14 +114,13 @@
                     HorizontalAlignment="Right"
                     Margin="0,12,0,0">
             <Button x:Name="OkButton"
-                    Width="90"
-                    Margin="0,0,8,0"
-                    IsDefault="True"
                     Content="OK"
+                    Style="{StaticResource DialogButtonStyle}"
+                    IsDefault="True"
                     Click="OkButton_ClickHandler" />
-            <Button Width="90"
-                    IsCancel="True"
-                    Content="Cancel" />
+            <Button Content="Cancel"
+                    Style="{StaticResource DialogButtonStyle}"
+                    IsCancel="True" />
         </StackPanel>
     </Grid>
 </Window>

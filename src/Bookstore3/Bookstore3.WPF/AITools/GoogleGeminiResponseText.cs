@@ -5,14 +5,17 @@ namespace Bookstore3.WPF.AITools;
 
 internal static class GoogleGeminiResponseText
 {
-    public static string GetTextOrThrow(GenerateContentResponse? response, string contextLabel = "Google AI")
+    public static string GetTextOrThrow(
+        GenerateContentResponse? response,
+        IAiDebugLog debugLog,
+        string contextLabel = "Google AI")
     {
         var text = TryGetText(response);
         if (string.IsNullOrWhiteSpace(text) == false)
             return text;
 
         var message = BuildEmptyContentMessage(response, contextLabel);
-        GoogleAiDebugLog.Write($"GetTextOrThrow failed ({contextLabel}): {message}");
+        debugLog.Write($"GetTextOrThrow failed ({contextLabel}): {message}");
         throw new InvalidOperationException(message);
     }
 

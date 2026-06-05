@@ -102,10 +102,7 @@ internal static class BookMetadataPrompt
     private const string CoverImageUrlFieldExplanation =
         "The coverImageUrl field must be a direct https URL to the book cover image file (jpg, png, or webp), " +
         "not a bookstore or catalog page URL. " +
-        "Search for cover art on Open Library, publisher pages, ISBN databases, and bookstore listings. " +
-        "When an ISBN is known, use an Open Library cover URL such as https://covers.openlibrary.org/b/isbn/{ISBN}-L.jpg " +
-        "(ISBN digits only, no hyphens). " +
-        "Do not leave coverImageUrl null when a public cover image URL exists for that book. ";
+        "Search for cover art on publisher pages, ISBN databases, and bookstore listings. ";
 
     private const string MetadataFieldList =
         "title, author, isbn, pageCount, edition, format, publishYear, price, group, language, publisher, city, " +

@@ -40,28 +40,28 @@ internal static class GoogleGeminiRestClient
         var payload = BuildSearchRequestPayload(systemInstruction, userPrompt, model);
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
 
-        GoogleAiDebugLog.Write($"REST google_search: POST models/{model} (timeout {SearchRequestTimeout.TotalMinutes:0} min)");
+        GoogleAiDebugLog.Instance.Write($"REST google_search: POST models/{model} (timeout {SearchRequestTimeout.TotalMinutes:0} min)");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (response.IsSuccessStatusCode == false)
         {
-            GoogleAiDebugLog.WriteResponseSnippet("REST error body", body, maxLength: 2000);
+            GoogleAiDebugLog.Instance.WriteResponseSnippet("REST error body", body, maxLength: 2000);
             throw new InvalidOperationException(
                 $"Google AI REST error ({(int)response.StatusCode}): {Truncate(body, 1500)}");
         }
 
         var parsed = ParseResponse(body);
-        GoogleAiDebugLog.Write(
+        GoogleAiDebugLog.Instance.Write(
             $"REST google_search completed: text length={parsed.Text?.Length ?? 0}, " +
             $"finishReason={parsed.FinishReason}, webSearchQueryCount={parsed.WebSearchQueries.Count}, " +
             $"groundingChunkCount={parsed.GroundingChunkUrls.Count}");
-        GoogleAiDebugLog.WriteGroundingMetadata("REST google_search", parsed);
+        GoogleAiDebugLog.Instance.WriteGroundingMetadata("REST google_search", parsed);
 
         if (string.IsNullOrWhiteSpace(parsed.Text))
         {
-            GoogleAiDebugLog.WriteResponseSnippet("REST empty text, raw body", body, maxLength: 2000);
+            GoogleAiDebugLog.Instance.WriteResponseSnippet("REST empty text, raw body", body, maxLength: 2000);
             var detail = BuildEmptyTextDetail(parsed);
             throw new InvalidOperationException($"Google AI returned empty text after web search ({detail}).");
         }
@@ -302,7 +302,7 @@ internal static class GoogleGeminiRestClient
         var finishReason = candidate.TryGetProperty("finishReason", out var reason)
             ? reason.GetString()
             : null;
-        GoogleAiDebugLog.Write(
+        GoogleAiDebugLog.Instance.Write(
             $"REST candidate[{index}] has no content (finishReason={finishReason ?? "unknown"}, " +
             $"properties={string.Join(", ", propertyNames)}).");
     }

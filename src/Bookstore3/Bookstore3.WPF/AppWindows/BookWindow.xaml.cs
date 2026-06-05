@@ -82,11 +82,12 @@ public partial class BookWindow : Window, IOptionsSavable
 
         try
         {
+            var debugLog = GetDebugLog(metadataService);
             var author = string.IsNullOrWhiteSpace(AuthorTextBox.Text) ? null : AuthorTextBox.Text.Trim();
             int? edition = EditionIntegerTextBox.Value is long editionValue
                 ? (int)editionValue
                 : null;
-            GoogleAiDebugLog.Write($"[BookWindow] Fetch from {providerName} started — title=\"{TitleTextBox.Text.Trim()}\"");
+            debugLog.Write($"[BookWindow] Fetch from {providerName} started — title=\"{TitleTextBox.Text.Trim()}\"");
             var fetchTimeout = metadataService is GoogleAiBookMetadataService
                 ? TimeSpan.FromMinutes(20)
                 : TimeSpan.FromMinutes(5);
@@ -97,15 +98,15 @@ public partial class BookWindow : Window, IOptionsSavable
                 edition,
                 fetchCts.Token);
 
-            GoogleAiDebugLog.Write($"[BookWindow] Fetch from {providerName} returned {results.Count} book(s).");
+            debugLog.Write($"[BookWindow] Fetch from {providerName} returned {results.Count} book(s).");
             if (results.Count == 0)
             {
-                GoogleAiDebugLog.Write($"[BookWindow] Showing 'no matching books' for {providerName} (no exception thrown).");
+                debugLog.Write($"[BookWindow] Showing 'no matching books' for {providerName} (no exception thrown).");
                 AppUtils.ShowInfoMessage($"No matching books were found from {providerName}.");
                 return;
             }
 
-            var picker = new BookMetadataPickerDialog(results)
+            var picker = new BookMetadataPickerDialog(results, _appOptionRepository)
             {
                 Owner = this
             };
@@ -118,7 +119,7 @@ public partial class BookWindow : Window, IOptionsSavable
         }
         catch (Exception ex)
         {
-            GoogleAiDebugLog.WriteException($"[BookWindow] Fetch from {providerName}", ex);
+            GetDebugLog(metadataService).WriteException($"[BookWindow] Fetch from {providerName}", ex);
             var errorText = metadataService is GoogleAiBookMetadataService
                 ? GoogleGeminiApiHelper.FormatExceptionForDialog(ex)
                 : ex.Message;
@@ -130,6 +131,14 @@ public partial class BookWindow : Window, IOptionsSavable
             fetchButton.ToolTip = originalToolTip;
         }
     }
+
+    private static IAiDebugLog GetDebugLog(IAiBookMetadataService metadataService) =>
+        metadataService switch
+        {
+            GoogleAiBookMetadataService => GoogleAiDebugLog.Instance,
+            OpenAiBookMetadataService => OpenAiDebugLog.Instance,
+            _ => GoogleAiDebugLog.Instance
+        };
 
     public bool SaveOptions()
     {
@@ -213,6 +222,34 @@ public partial class BookWindow : Window, IOptionsSavable
         ShopComboBox.SelectedValue = AppConstants.UndefinedRecordId;
         LanguageComboBox.SelectedValue = AppConstants.UndefinedRecordId;
         CityComboBox.SelectedValue = AppConstants.UndefinedRecordId;
+    }
+
+    private void ClearButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        ClearForm();
+
+    private void ClearForm()
+    {
+        TitleTextBox.Text = string.Empty;
+        AuthorTextBox.Text = string.Empty;
+        IsbnTextBox.Text = string.Empty;
+        FormatTextBox.Text = string.Empty;
+        BookFileTextBox.Text = string.Empty;
+        AnnotationTextBox.Text = string.Empty;
+        DetailsTextBox.Text = string.Empty;
+
+        EditionIntegerTextBox.Value = null;
+        PageCountIntegerTextBox.Value = null;
+        PriceDoubleTextBox.Value = null;
+
+        PublishYearDatePicker.Value = null;
+        GotAtDateTimeEdit.DateTime = null;
+
+        HardcoverCheckBox.IsChecked = false;
+        DigitalCopyCheckBox.IsChecked = false;
+
+        InitLookupComboBoxesToUndefined();
+
+        _coverImageBytes = AppUtils.LoadCoverImage(null, CoverImage, NoImagePanel);
     }
 
     private void ApplyFetchedMetadata(BookMetadataResult metadata)

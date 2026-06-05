@@ -16,7 +16,10 @@ internal static class BookMetadataJsonParser
         }
     };
 
-    public static IReadOnlyList<BookMetadataResult> ParseList(string content, string? debugContext = null)
+    public static IReadOnlyList<BookMetadataResult> ParseList(
+        string content,
+        IAiDebugLog debugLog,
+        string? debugContext = null)
     {
         var contextPrefix = string.IsNullOrWhiteSpace(debugContext) ? "ParseList" : $"ParseList ({debugContext})";
 
@@ -24,8 +27,8 @@ internal static class BookMetadataJsonParser
             throw new InvalidOperationException("AI returned empty content.");
 
         var json = ExtractJsonPayload(content);
-        GoogleAiDebugLog.Write($"{contextPrefix}: extracted JSON length={json.Length}");
-        GoogleAiDebugLog.WriteResponseSnippet($"{contextPrefix} JSON", json, maxLength: 600);
+        debugLog.Write($"{contextPrefix}: extracted JSON length={json.Length}");
+        debugLog.WriteResponseSnippet($"{contextPrefix} JSON", json, maxLength: 600);
 
         try
         {
@@ -33,14 +36,14 @@ internal static class BookMetadataJsonParser
             if (books is null)
                 throw new InvalidOperationException("AI response is not valid JSON metadata.");
 
-            GoogleAiDebugLog.Write($"{contextPrefix}: deserialized raw book count={books.Count}");
+            debugLog.Write($"{contextPrefix}: deserialized raw book count={books.Count}");
 
             var filtered = books.Where(HasIdentifyingMetadata).ToList();
-            GoogleAiDebugLog.Write($"{contextPrefix}: after filter count={filtered.Count}");
+            debugLog.Write($"{contextPrefix}: after filter count={filtered.Count}");
 
             if (filtered.Count == 0 && books.Count > 0)
             {
-                GoogleAiDebugLog.Write($"{contextPrefix}: filter removed all books, returning unfiltered list.");
+                debugLog.Write($"{contextPrefix}: filter removed all books, returning unfiltered list.");
                 BookMetadataCoverEnricher.EnrichCoverImageUrls(books);
                 return books;
             }
@@ -50,7 +53,7 @@ internal static class BookMetadataJsonParser
         }
         catch (JsonException ex)
         {
-            GoogleAiDebugLog.WriteException(contextPrefix, ex);
+            debugLog.WriteException(contextPrefix, ex);
             throw new InvalidOperationException(
                 $"AI metadata JSON is invalid or uses unsupported field types: {ex.Message}", ex);
         }

@@ -1,36 +1,18 @@
-using System.IO;
-
 namespace Bookstore3.WPF.AITools;
 
-internal static class GoogleAiDebugLog
+internal sealed class GoogleAiDebugLog : AiFileDebugLog
 {
-    private const string LogFileName = "google-ai-debug.log";
-    private static readonly object Sync = new();
-    private static readonly string LogFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Bookstore3",
-        LogFileName);
+    public static GoogleAiDebugLog Instance { get; } = new();
 
-    public static string FilePath => LogFilePath;
-
-    public static void Write(string message) => AppendLine(message);
-
-    public static void WriteResponseSnippet(string label, string? text, int maxLength = 8000)
+    private GoogleAiDebugLog()
     {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            Write($"{label}: (empty)");
-            return;
-        }
-
-        var snippet = text.Length <= maxLength
-            ? text
-            : text[..maxLength] + "...";
-        Write($"{label} ({text.Length} chars):");
-        AppendLine(snippet, includeTimestamp: false);
     }
 
-    public static void WriteGroundingMetadata(string label, GoogleGeminiRestResponse response)
+    protected override string LogFileName => "google-ai-debug.log";
+
+    protected override string LogPrefix => "GoogleAI";
+
+    public void WriteGroundingMetadata(string label, GoogleGeminiRestResponse response)
     {
         Write($"{label} grounding: webSearchQueryCount={response.WebSearchQueries.Count}, groundingChunkCount={response.GroundingChunkUrls.Count}");
 
@@ -55,45 +37,5 @@ internal static class GoogleAiDebugLog
 
         if (string.IsNullOrWhiteSpace(response.SearchEntryPoint) == false)
             WriteResponseSnippet($"{label} searchEntryPoint", response.SearchEntryPoint, maxLength: 2000);
-    }
-
-    public static void WriteException(string label, Exception ex)
-    {
-        Write($"{label}: {ex.GetType().Name}: {ex.Message}");
-        var inner = ex.InnerException;
-        while (inner is not null)
-        {
-            Write($"{label}: inner {inner.GetType().Name}: {inner.Message}");
-            inner = inner.InnerException;
-        }
-
-        if (string.IsNullOrWhiteSpace(ex.StackTrace) == false)
-            AppendLine(ex.StackTrace, includeTimestamp: false);
-    }
-
-    public static void BeginSession(string summary)
-    {
-        lock (Sync)
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath)!);
-            File.AppendAllText(
-                LogFilePath,
-                $"{Environment.NewLine}========== {DateTime.Now:yyyy-MM-dd HH:mm:ss} =========={Environment.NewLine}" +
-                $"Log file: {LogFilePath}{Environment.NewLine}" +
-                $"{summary}{Environment.NewLine}");
-        }
-    }
-
-    private static void AppendLine(string message, bool includeTimestamp = true)
-    {
-        var line = includeTimestamp
-            ? $"[GoogleAI] {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}"
-            : message;
-
-        lock (Sync)
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath)!);
-            File.AppendAllText(LogFilePath, line + Environment.NewLine);
-        }
     }
 }

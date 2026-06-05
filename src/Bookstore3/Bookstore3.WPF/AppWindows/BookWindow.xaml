@@ -65,6 +65,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <Style x:Key="MainDataDoubleTextBoxStyle" TargetType="syncfusion:DoubleTextBox">
+            <Setter Property="UseNullOption" Value="True" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,2" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -143,6 +144,18 @@
                         <iconPacks:PackIconMaterial Kind="Google"
                                                     Style="{StaticResource ToolbarIconStyle}" />
                         <TextBlock Text="Fetch from Google AI"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Separator />
+                <Button x:Name="ClearButton"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        ToolTip="Clear all input fields"
+                        Click="ClearButton_ClickHandler">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Eraser"
+                                                    Style="{StaticResource ToolbarIconStyle}" />
+                        <TextBlock Text="Clear"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>

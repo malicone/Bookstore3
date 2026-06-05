@@ -16,6 +16,7 @@ internal static class GoogleGeminiApiHelper
         GenerateContentRequest request,
         string logLabel,
         bool useGoogleSearch,
+        IAiDebugLog debugLog,
         CancellationToken cancellationToken)
     {
         var requestTimeout = useGoogleSearch ? SearchRequestTimeout : DefaultRequestTimeout;
@@ -23,13 +24,13 @@ internal static class GoogleGeminiApiHelper
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(requestTimeout);
 
-        GoogleAiDebugLog.Write(
+        debugLog.Write(
             $"{logLabel}: HTTP request starting (timeout {requestTimeout.TotalSeconds:0}s, UseGoogleSearch={useGoogleSearch})...");
 
         try
         {
             var response = await model.GenerateContent(request, cancellationToken: timeoutCts.Token);
-            GoogleAiDebugLog.Write($"{logLabel}: HTTP request completed.");
+            debugLog.Write($"{logLabel}: HTTP request completed.");
             return response;
         }
         catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested && cancellationToken.IsCancellationRequested == false)
@@ -41,12 +42,12 @@ internal static class GoogleGeminiApiHelper
         catch (GeminiApiException ex)
         {
             var detail = FormatGeminiApiError(ex);
-            GoogleAiDebugLog.Write($"{logLabel}: GeminiApiException — {detail}");
+            debugLog.Write($"{logLabel}: GeminiApiException — {detail}");
             throw new InvalidOperationException($"Google AI API error ({logLabel}): {detail}", ex);
         }
         catch (Exception ex)
         {
-            GoogleAiDebugLog.WriteException($"{logLabel}: unhandled", ex);
+            debugLog.WriteException($"{logLabel}: unhandled", ex);
             throw;
         }
     }
