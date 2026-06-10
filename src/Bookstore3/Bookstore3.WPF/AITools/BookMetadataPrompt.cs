@@ -24,16 +24,12 @@ internal static class BookMetadataPrompt
         "Find at least 3 books and up to 10 books (maximum limit 10). " +
         "Include every distinct relevant match in that range; do not stop after the first book. ";
 
-    private const string SearchEfficiencyRequirement =
-        "Use the fewest web searches needed (prefer one broad search query, at most 3 searches). ";
-
     public static string BuildUserPrompt(string title, string? author, int? edition)
     {
         var searchCriteria = BuildSearchCriteria(title, author, edition);
 
         return
             "Go to the web and search for books matching the criteria below. " +
-            SearchEfficiencyRequirement +
             BooksCountRequirement +
             "Return one JSON object with a single property \"books\" whose value is an array of book objects " +
             "ordered from most relevant to least relevant. " +
@@ -42,6 +38,7 @@ internal static class BookMetadataPrompt
             FormatFieldExplanation +
             HardcoverFieldExplanation +
             CoverImageUrlFieldExplanation +
+            SourceUrlFieldExplanation +
             "The annotation field is the book summary (annotation is a synonym of summary). " +
             "For annotation, search and use only publicly available summary text about the book from the web " +
             "(for example library catalogs, Open Library, ISBN databases, publisher pages, or bookstore listings). " +
@@ -56,7 +53,6 @@ internal static class BookMetadataPrompt
     {
         return
             "Search the web for books matching the criteria below. " +
-            SearchEfficiencyRequirement +
             BooksCountRequirement +
             "Write plain-text research notes for each match, " +
             "ordered from most relevant to least relevant. " +
@@ -65,6 +61,7 @@ internal static class BookMetadataPrompt
             FormatFieldExplanation +
             HardcoverFieldExplanation +
             CoverImageUrlFieldExplanation +
+            SourceUrlFieldExplanation +
             "The annotation field is the book summary. Use only publicly available summary text; paraphrase briefly if needed. " +
             "If no matches are found, say that no matches were found. " +
             "Do not return JSON. " +
@@ -82,7 +79,8 @@ internal static class BookMetadataPrompt
             FormatFieldExplanation +
             HardcoverFieldExplanation +
             CoverImageUrlFieldExplanation +
-            "publishYear must be integer year if known. URLs must be absolute https URLs. " +
+            SourceUrlFieldExplanation +
+            "publishYear must be integer year if known. " +
             "Only return {\"books\":[]} when the notes explicitly state that no books were found. " +
             BuildSearchCriteria(title, author, edition) +
             "\n\nResearch notes:\n" +
@@ -104,9 +102,14 @@ internal static class BookMetadataPrompt
         "not a bookstore or catalog page URL. " +
         "Search for cover art on publisher pages, ISBN databases, and bookstore listings. ";
 
+    private const string SourceUrlFieldExplanation =
+        "The sourceUrl field is the https URL of the public web page where this book's metadata was found " +
+        "(publisher page, library catalog, ISBN database, bookstore listing). " +
+        "It must be a catalog or listing page URL, not a cover image URL. Don't generate the sourceUrl but use actual from the Web. ";
+
     private const string MetadataFieldList =
         "title, author, isbn, pageCount, edition, format, publishYear, price, group, language, publisher, city, " +
-        "wrapper, annotation, coverImageUrl.";
+        "wrapper, annotation, coverImageUrl, sourceUrl.";
 
     private static string BuildSearchCriteria(string title, string? author, int? edition)
     {

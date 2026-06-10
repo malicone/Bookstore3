@@ -3,9 +3,11 @@ using Bookstore3.WPF.AITools;
 using Bookstore3.WPF.Options;
 using Bookstore3.WPF.Utils;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Navigation;
 
 namespace Bookstore3.WPF.AppWindows;
 
@@ -92,6 +94,20 @@ public partial class BookMetadataPickerDialog : Window, IOptionsSavable
 
         SelectedMetadata = selected.Metadata;
         DialogResult = true;
+    }
+
+    private void SourceUrl_RequestNavigateHandler(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppUtils.ShowErrorMessage($"Failed to open link: {ex.Message}");
+        }
+
+        e.Handled = true;
     }
 
     private string GetFullOptionName(string optionName) => $"{_OptionsPrefix}.{optionName}";

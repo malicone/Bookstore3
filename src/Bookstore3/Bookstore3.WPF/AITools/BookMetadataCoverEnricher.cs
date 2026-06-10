@@ -11,17 +11,26 @@ internal static class BookMetadataCoverEnricher
         foreach (var book in books)
         {
             if (string.IsNullOrWhiteSpace(book.coverImageUrl) == false)
-            {
-                book.coverImageUrl = NormalizeImageUrl(book.coverImageUrl);
-                continue;
-            }
+                book.coverImageUrl = NormalizeHttpUrl(book.coverImageUrl);
+            else if (NormalizeIsbn(book.isbn) is { } isbnForCover)
+                book.coverImageUrl = $"https://covers.openlibrary.org/b/isbn/{isbnForCover}-L.jpg";
 
-            var isbn = NormalizeIsbn(book.isbn);
-            if (isbn is null)
-                continue;
-
-            book.coverImageUrl = $"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg";
+            EnrichSourceUrl(book);
         }
+    }
+
+    private static void EnrichSourceUrl(BookMetadataResult book)
+    {
+        if (string.IsNullOrWhiteSpace(book.sourceUrl) == false)
+        {
+            book.sourceUrl = NormalizeHttpUrl(book.sourceUrl);
+            return;
+        }
+
+        if (NormalizeIsbn(book.isbn) is not { } isbn)
+            return;
+
+        book.sourceUrl = $"https://openlibrary.org/isbn/{isbn}";
     }
 
     private static string? NormalizeIsbn(string? isbn)
@@ -33,7 +42,7 @@ internal static class BookMetadataCoverEnricher
         return digits.Length is 10 or 13 ? digits : null;
     }
 
-    private static string NormalizeImageUrl(string url)
+    private static string NormalizeHttpUrl(string url)
     {
         url = url.Trim();
         if (url.StartsWith("//", StringComparison.Ordinal))

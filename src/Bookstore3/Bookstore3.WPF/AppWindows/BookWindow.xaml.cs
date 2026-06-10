@@ -12,6 +12,8 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace Bookstore3.WPF.AppWindows;
 
@@ -532,6 +534,26 @@ public partial class BookWindow : Window, IOptionsSavable
         CoverImageBorder.Width = height * AppConstants.CoverImageWidthToHeightRatio;
     }
 
+    private void BookWindow_PreviewKeyDownHandler(object sender, KeyEventArgs e)
+    {
+        if (BookTabControl.SelectedItem != CoverImageTabItem)
+            return;
+
+        if (Keyboard.Modifiers != ModifierKeys.Control)
+            return;
+
+        if (e.Key == Key.A)
+        {
+            AddCoverImageButton_ClickHandler(AddCoverImageButton, e);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.V)
+        {
+            PasteCoverImageButton_ClickHandler(PasteCoverImageButton, e);
+            e.Handled = true;
+        }
+    }
+
     private void AddCoverImageButton_ClickHandler(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -555,9 +577,110 @@ public partial class BookWindow : Window, IOptionsSavable
         }
     }
 
+    private void PasteCoverImageButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        if (TryGetClipboardImageBytes(out var imageBytes) == false)
+            return;
+
+        try
+        {
+            _coverImageBytes = AppUtils.LoadCoverImage(imageBytes, CoverImage, NoImagePanel);
+        }
+        catch
+        {
+            // Clipboard did not contain a usable image.
+        }
+    }
+
     private void ClearCoverImageButton_ClickHandler(object sender, RoutedEventArgs e)
     {
         _coverImageBytes = AppUtils.LoadCoverImage(null, CoverImage, NoImagePanel);
+    }
+
+    private static bool TryGetClipboardImageBytes(out byte[]? imageBytes)
+    {
+        imageBytes = null;
+
+        if (Clipboard.ContainsImage())
+        {
+            var bitmapSource = Clipboard.GetImage();
+            if (bitmapSource is not null)
+            {
+                imageBytes = EncodeBitmapSourceToPng(bitmapSource);
+                return imageBytes is { Length: > 0 };
+            }
+        }
+
+        if (Clipboard.ContainsFileDropList())
+        {
+            var files = Clipboard.GetFileDropList();
+            if (files.Count == 1 &&
+                string.IsNullOrWhiteSpace(files[0]) == false &&
+                IsSupportedImageFilePath(files[0]!))
+            {
+                try
+                {
+                    var bytes = File.ReadAllBytes(files[0]!);
+                    if (IsValidImageBytes(bytes))
+                    {
+                        imageBytes = bytes;
+                        return true;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedImageFilePath(string path)
+    {
+        var extension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(extension))
+            return false;
+
+        return extension.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".gif", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".tif", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".tiff", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".jfif", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".heic", StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(".heif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsValidImageBytes(byte[] imageBytes)
+    {
+        if (imageBytes is not { Length: > 0 })
+            return false;
+
+        try
+        {
+            using var stream = new MemoryStream(imageBytes);
+            BitmapDecoder.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static byte[] EncodeBitmapSourceToPng(BitmapSource source)
+    {
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(source));
+
+        using var outputStream = new MemoryStream();
+        encoder.Save(outputStream);
+        return outputStream.ToArray();
     }
 
     private void RotateCoverLeftButton_ClickHandler(object sender, RoutedEventArgs e)

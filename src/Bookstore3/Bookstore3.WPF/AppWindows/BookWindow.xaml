@@ -18,7 +18,8 @@
         MinWidth="500"
         MinHeight="400"
         Loaded="BookWindow_LoadedHandler"
-        Closing="BookWindow_ClosingHandler">
+        Closing="BookWindow_ClosingHandler"
+        PreviewKeyDown="BookWindow_PreviewKeyDownHandler">
     <Window.Resources>
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="36" />
@@ -188,7 +189,7 @@
         </Border>
 
         <TabControl x:Name="BookTabControl" Margin="8">
-        <TabItem Header="Cover Image">
+        <TabItem x:Name="CoverImageTabItem" Header="Cover Image">
             <DockPanel LastChildFill="True">
                 <Border DockPanel.Dock="Top"
                         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
@@ -199,10 +200,20 @@
                     <ToolBar Background="Transparent">
                         <Button x:Name="AddCoverImageButton"
                                 Style="{StaticResource ToolbarButtonStyle}"
+                                ToolTip="Add cover image from file (Ctrl+A)"
                                 Click="AddCoverImageButton_ClickHandler">
                             <StackPanel Orientation="Horizontal">
                                 <iconPacks:PackIconMaterial Kind="ImagePlus" Style="{StaticResource ToolbarIconStyle}" />
                                 <TextBlock Text="Add" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="PasteCoverImageButton"
+                                Style="{StaticResource ToolbarButtonStyle}"
+                                ToolTip="Paste cover image from clipboard (Ctrl+V)"
+                                Click="PasteCoverImageButton_ClickHandler">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="ContentPaste" Style="{StaticResource ToolbarIconStyle}" />
+                                <TextBlock Text="Paste" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                         <Button x:Name="ClearCoverImageButton"

@@ -10,6 +10,7 @@
         Width="820"
         MinHeight="360"
         MinWidth="560"
+        WindowStyle="ToolWindow"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
@@ -29,6 +30,12 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="6" />
             <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style x:Key="SourceHyperlinkStyle" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="#0563C1" />
+            <Setter Property="TextDecorations" Value="Underline" />
+            <EventSetter Event="RequestNavigate" Handler="SourceUrl_RequestNavigateHandler" />
         </Style>
 
         <DataTemplate x:Key="BookMetadataPickerItemTemplate">
@@ -84,6 +91,26 @@
                                FontSize="12"
                                Foreground="#444444"
                                TextWrapping="Wrap" />
+                    <TextBlock Margin="0,6,0,0"
+                               FontSize="11"
+                               TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasSourceUrl}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Source: "
+                             Foreground="#666666" />
+                        <Hyperlink NavigateUri="{Binding SourceUrl, Mode=OneWay}"
+                                   Style="{StaticResource SourceHyperlinkStyle}">
+                            <Run Text="{Binding SourceUrl, Mode=OneWay}" />
+                        </Hyperlink>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
         </DataTemplate>

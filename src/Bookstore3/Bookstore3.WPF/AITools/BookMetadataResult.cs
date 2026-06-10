@@ -20,6 +20,13 @@ public sealed class BookMetadataResult
     public bool? wrapper { get; set; }
     public string? annotation { get; set; }
     public string? coverImageUrl { get; set; }
+    public string? sourceUrl { get; set; }
+
+    [JsonPropertyName("source_url")]
+    public string? source_url { set { if (string.IsNullOrWhiteSpace(sourceUrl)) sourceUrl = value; } }
+
+    [JsonPropertyName("referenceUrl")]
+    public string? referenceUrl { set { if (string.IsNullOrWhiteSpace(sourceUrl)) sourceUrl = value; } }
 
     [JsonPropertyName("cover_url")]
     public string? cover_url { set { if (string.IsNullOrWhiteSpace(coverImageUrl)) coverImageUrl = value; } }

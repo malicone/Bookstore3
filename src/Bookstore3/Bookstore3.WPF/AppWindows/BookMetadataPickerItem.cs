@@ -26,6 +26,11 @@ internal sealed class BookMetadataPickerItem : INotifyPropertyChanged
 
     public string ExtendedDescription { get; }
 
+    public string? SourceUrl =>
+        string.IsNullOrWhiteSpace(Metadata.sourceUrl) ? null : Metadata.sourceUrl.Trim();
+
+    public bool HasSourceUrl => string.IsNullOrWhiteSpace(SourceUrl) == false;
+
     public ImageSource? CoverImage
     {
         get => _coverImage;

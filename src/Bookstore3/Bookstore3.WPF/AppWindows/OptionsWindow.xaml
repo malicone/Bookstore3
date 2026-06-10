@@ -102,7 +102,7 @@
                                              Style="{StaticResource OptionTextBoxStyle}" />
                 </Grid>
             </TabItem>
-            <TabItem Header="Google">
+            <TabItem Header="Google AI">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -115,7 +115,7 @@
 
                     <TextBlock Grid.Row="0"
                                Grid.Column="0"
-                               Text="Google API Key"
+                               Text="Google AI API Key"
                                Style="{StaticResource OptionLabelStyle}" />
                     <syncfusion:SfTextBoxExt x:Name="GoogleApiKeyTextBox"
                                              Grid.Row="0"
@@ -124,7 +124,7 @@
 
                     <TextBlock Grid.Row="1"
                                Grid.Column="0"
-                               Text="Google Model"
+                               Text="Google AI Model"
                                Style="{StaticResource OptionLabelStyle}" />
                     <syncfusion:SfTextBoxExt x:Name="GoogleModelTextBox"
                                              Grid.Row="1"
@@ -135,4 +135,4 @@
         </TabControl>
     </DockPanel>
 </Window>
-
+
