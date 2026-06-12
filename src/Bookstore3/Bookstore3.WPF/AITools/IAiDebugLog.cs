@@ -2,6 +2,8 @@ namespace Bookstore3.WPF.AITools;
 
 internal interface IAiDebugLog
 {
+    event Action<string>? LineAppended;
+
     string FilePath { get; }
 
     void BeginSession(string summary);

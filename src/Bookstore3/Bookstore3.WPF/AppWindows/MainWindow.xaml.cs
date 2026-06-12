@@ -250,6 +250,15 @@ public partial class MainWindow : Window, IOptionsSavable
         optionsWindow.ShowDialog();
     }
 
+    private void AboutButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        var aboutWindow = new AboutWindow
+        {
+            Owner = this
+        };
+        aboutWindow.ShowDialog();
+    }
+
     private void GroupsMenuItem_ClickHandler(object sender, RoutedEventArgs e) =>
         ShowLookupWindow<group>("Groups");
 
@@ -834,6 +843,16 @@ public partial class MainWindow : Window, IOptionsSavable
     private void CopyBookFileButton_ClickHandler(object sender, RoutedEventArgs e) =>
         CopyDetailTextToClipboard(DetailBookFileText);
 
+    private void CopyMetadataButton_ClickHandler(object sender, RoutedEventArgs e)
+    {
+        var book = GetCurrentBook();
+        if (book is null)
+            return;
+
+        var metadata = $"{book.title} - {book.author ?? string.Empty} - {book.edition}-ed - {book.publisher_name ?? string.Empty}";
+        Clipboard.SetText(metadata);
+    }
+
     private void OpenBookFileButton_ClickHandler(object sender, RoutedEventArgs e)
     {
         var path = DetailBookFileText.Text.Trim();
@@ -904,6 +923,7 @@ public partial class MainWindow : Window, IOptionsSavable
             DetailPreviousButton.IsEnabled = false;
             DetailNextButton.IsEnabled = false;
             DetailLastButton.IsEnabled = false;
+            CopyMetadataButton.IsEnabled = false;
             return;
         }
 
@@ -911,6 +931,7 @@ public partial class MainWindow : Window, IOptionsSavable
         DetailPreviousButton.IsEnabled = recordIndex > 0;
         DetailNextButton.IsEnabled = recordIndex < recordCount - 1;
         DetailLastButton.IsEnabled = recordIndex < recordCount - 1;
+        CopyMetadataButton.IsEnabled = true;
     }
 
     private void SyncGridSelectionToCurrentBook()

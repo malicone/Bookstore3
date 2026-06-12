@@ -165,6 +165,10 @@ The main window provides a collapsible search bar between the tab area and the s
 
 Use **Refresh Data** or close the search bar to return to the complete catalogue.
 
+## AI metadata fetch
+
+The book editor can search the public web for book metadata using **Google AI** (Gemini with Google Search grounding) or **Open AI**. Enter a title, author, and optional edition, then click **Fetch from Google AI** or **Fetch from Open AI** on the toolbar. Matching candidates appear in a picker; selecting one fills in fields such as ISBN, publisher, format, cover image URL, and annotation. Configure API keys and models in **Options** (toolbar **Settings**).
+
 ## Export
 
 The **Export** menu on the main window toolbar exports **selected rows** from the book list to Excel (`.xlsx`), CSV (`.csv`), or PDF (`.pdf`).
@@ -183,6 +187,7 @@ After confirmation, a save dialog opens with a default file name such as `Books_
 - **Book details** — cover image, metadata, annotation, and notes on a dedicated tab; First / Previous / Next / Last navigation moves through visible grid rows (respecting filters and groups)
 - **Create, edit, delete** — full book editor with cover image, lookup fields, and validation; double-click a grid row to edit
 - **Search** — quick text search by title or author (see [Search](#search) above)
+- **AI metadata fetch** — web-backed book lookup from the edit window via Google AI or Open AI (see [AI metadata fetch](#ai-metadata-fetch) above)
 - **Export** — selected grid rows to Excel, CSV, or PDF via Syncfusion grid export (see [Export](#export) above)
 - **Lookup tables** — maintain groups, publishers, shops, languages, and cities from the Groups menu
 - **Status bar** — live totals for books and all lookup tables

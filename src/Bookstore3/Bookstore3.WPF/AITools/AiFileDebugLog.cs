@@ -6,6 +6,8 @@ internal abstract class AiFileDebugLog : IAiDebugLog
 {
     private readonly object _sync = new();
 
+    public event Action<string>? LineAppended;
+
     protected abstract string LogFileName { get; }
 
     protected abstract string LogPrefix { get; }
@@ -17,15 +19,9 @@ internal abstract class AiFileDebugLog : IAiDebugLog
 
     public void BeginSession(string summary)
     {
-        lock (_sync)
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.AppendAllText(
-                FilePath,
-                $"{Environment.NewLine}========== {DateTime.Now:yyyy-MM-dd HH:mm:ss} =========={Environment.NewLine}" +
-                $"Log file: {FilePath}{Environment.NewLine}" +
-                $"{summary}{Environment.NewLine}");
-        }
+        AppendLine($"{Environment.NewLine}========== {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==========", includeTimestamp: false);
+        AppendLine($"Log file: {FilePath}", includeTimestamp: false);
+        AppendLine(summary, includeTimestamp: false);
     }
 
     public void Write(string message) =>
@@ -71,5 +67,7 @@ internal abstract class AiFileDebugLog : IAiDebugLog
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             File.AppendAllText(FilePath, line + Environment.NewLine);
         }
+
+        LineAppended?.Invoke(line);
     }
 }

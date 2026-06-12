@@ -43,6 +43,9 @@ public partial class BookWindow : Window, IOptionsSavable
             _googleAiBookMetadataService = new GoogleAiBookMetadataService(_appOptionRepository, _stringCipher);
         }
 
+        GoogleAiDebugLog.Instance.LineAppended += OnAiDebugLogLineAppended;
+        OpenAiDebugLog.Instance.LineAppended += OnAiDebugLogLineAppended;
+
         try
         {
             ApplyWindowOptionsFromDatabase();
@@ -165,6 +168,9 @@ public partial class BookWindow : Window, IOptionsSavable
 
     private void BookWindow_ClosingHandler(object? sender, CancelEventArgs e)
     {
+        GoogleAiDebugLog.Instance.LineAppended -= OnAiDebugLogLineAppended;
+        OpenAiDebugLog.Instance.LineAppended -= OnAiDebugLogLineAppended;
+
         try
         {
             SaveOptions();
@@ -173,6 +179,31 @@ public partial class BookWindow : Window, IOptionsSavable
         {
             AppUtils.ShowErrorMessage($"Failed to save options: {ex.Message}");
         }
+    }
+
+    private void ShowLogButton_ClickHandler(object sender, RoutedEventArgs e) =>
+        SetAiLogVisible(AiLogBorder.Visibility != Visibility.Visible);
+
+    private void SetAiLogVisible(bool visible)
+    {
+        AiLogBorder.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        ShowLogButtonLabel.Text = visible ? "Hide Log" : "Show Log";
+        ShowLogButtonIcon.Kind = visible
+            ? MahApps.Metro.IconPacks.PackIconMaterialKind.TextBoxRemoveOutline
+            : MahApps.Metro.IconPacks.PackIconMaterialKind.TextBoxOutline;
+    }
+
+    private void OnAiDebugLogLineAppended(string line)
+    {
+        if (Dispatcher.CheckAccess() == false)
+        {
+            Dispatcher.BeginInvoke(() => OnAiDebugLogLineAppended(line));
+            return;
+        }
+
+        AiLogTextBox.AppendText(line + Environment.NewLine);
+        AiLogTextBox.CaretIndex = AiLogTextBox.Text.Length;
+        AiLogTextBox.ScrollToEnd();
     }
 
     private void BookWindow_LoadedHandler(object sender, RoutedEventArgs e)

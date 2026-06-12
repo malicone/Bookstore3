@@ -108,6 +108,20 @@
             <Setter Property="Margin" Value="8,0,0,0" />
             <Setter Property="Padding" Value="12,4" />
         </Style>
+        <Style x:Key="AiLogTextBoxStyle" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="IsReadOnlyCaretVisible" Value="True" />
+            <Setter Property="Focusable" Value="True" />
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -160,6 +174,20 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+                <Separator />
+                <Button x:Name="ShowLogButton"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        ToolTip="Show or hide AI fetch log"
+                        Click="ShowLogButton_ClickHandler">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial x:Name="ShowLogButtonIcon"
+                                                    Kind="TextBoxOutline"
+                                                    Style="{StaticResource ToolbarIconStyle}" />
+                        <TextBlock x:Name="ShowLogButtonLabel"
+                                   Text="Show Log"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </ToolBar>
             </StackPanel>
         </Border>
@@ -186,6 +214,18 @@
                             Click="CancelButton_ClickHandler" />
                 </StackPanel>
             </DockPanel>
+        </Border>
+
+        <Border x:Name="AiLogBorder"
+                DockPanel.Dock="Bottom"
+                Height="140"
+                Visibility="Collapsed"
+                Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                BorderThickness="0,1,0,0"
+                Margin="0,4,0,0">
+            <TextBox x:Name="AiLogTextBox"
+                     Style="{StaticResource AiLogTextBoxStyle}" />
         </Border>
 
         <TabControl x:Name="BookTabControl" Margin="8">
